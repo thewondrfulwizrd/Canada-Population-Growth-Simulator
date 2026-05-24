@@ -3,10 +3,6 @@ import { applyScenarios } from '../utils/scenarioCalculations';
 import { loadHistoricalBirths, loadHistoricalDeaths, loadHistoricalMortality, loadHistoricalMigration } from '../utils/historicalDataLoader';
 import './PopulationStatsTable.css';
 
-const BASELINE_MIGRATION = 400000;
-const BASELINE_FERTILITY = 1.25; // Canada's 2023-2024 TFR (Statistics Canada)
-const BASELINE_MORTALITY = 7.7;  // Deaths per 1000 population (Statistics Canada 2023)
-
 export function PopulationStatsTable({ data, scenarios, selectedYear }) {
   const [historicalBirths, setHistoricalBirths] = useState({});
   const [historicalDeaths, setHistoricalDeaths] = useState({});
@@ -24,14 +20,6 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
         loadHistoricalMortality(),
         loadHistoricalMigration()
       ]);
-      
-      console.log('Loaded births:', Object.keys(births).length, 'years');
-      console.log('Loaded deaths:', Object.keys(deaths).length, 'years');
-      console.log('Loaded mortality:', Object.keys(mortality).length, 'years');
-      console.log('Loaded migration:', Object.keys(migration).length, 'years');
-      console.log('Sample births 2024:', births[2024], '2025:', births[2025]);
-      console.log('Sample deaths 2023:', deaths[2023], '2024:', deaths[2024], '2025:', deaths[2025]);
-      console.log('Sample migration 2024:', migration[2024], '2025:', migration[2025]);
       
       setHistoricalBirths(births);
       setHistoricalDeaths(deaths);
@@ -105,14 +93,16 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
             
             netMigration = Math.round(historicalMigration[year] || 0);
           } else {
-            // Use scenario-adjusted calculations for projected years
-            const adjustedFertility = BASELINE_FERTILITY * (1 + scenarios.fertility / 100);
-            const adjustedMortality = BASELINE_MORTALITY * (1 - scenarios.mortality / 100);
-            const adjustedMigration = Math.round(BASELINE_MIGRATION * (1 + scenarios.migration / 100));
-            
-            births = Math.round((total / 1000) * (adjustedFertility * 6.67));
-            deaths = Math.round((total / 1000) * adjustedMortality);
-            netMigration = adjustedMigration;
+            // Use exact values from the cohort-component model:
+            // _components contains age/sex-specific births, deaths, and migration
+            // computed during the projection step for this exact year.
+            const c = population._components;
+            births = c.births;
+            // Total deaths = existing-population deaths + infant deaths from newborns
+            const infantSurvivors = (c.maleInfantSurvivors || 0) + (c.femaleInfantSurvivors || 0);
+            const infantDeaths = births - infantSurvivors;
+            deaths = c.deaths + infantDeaths;
+            netMigration = c.adjustedNetMigration;
           }
           
           const naturalIncrease = births - deaths;
