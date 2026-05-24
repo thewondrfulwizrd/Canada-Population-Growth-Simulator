@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { getPopulationByYear } from '../utils/populationHelpers';
 import { applyScenarios } from '../utils/scenarioCalculations';
 import { loadHistoricalBirths, loadHistoricalDeaths, loadHistoricalMortality, loadHistoricalMigration } from '../utils/historicalDataLoader';
 import './PopulationStatsTable.css';
 
 const BASELINE_MIGRATION = 400000;
-const BASELINE_FERTILITY = 1.5;
-const BASELINE_MORTALITY = 8.0; // Deaths per 1000 population (realistic rate for Canada)
+const BASELINE_FERTILITY = 1.25; // Canada's 2023-2024 TFR (Statistics Canada)
+const BASELINE_MORTALITY = 7.7;  // Deaths per 1000 population (Statistics Canada 2023)
 
 export function PopulationStatsTable({ data, scenarios, selectedYear }) {
   const [historicalBirths, setHistoricalBirths] = useState({});
@@ -15,7 +14,6 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
   const [historicalMigration, setHistoricalMigration] = useState({});
   const [dataLoaded, setDataLoaded] = useState(false);
   const [tableData, setTableData] = useState([]);
-  const [computingTable, setComputingTable] = useState(false);
 
   // Load historical data on mount
   useEffect(() => {
@@ -49,7 +47,6 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
     async function computeTableData() {
       if (!data || !dataLoaded) return;
       
-      setComputingTable(true);
       try {
         const years = [...data.yearsObserved, ...data.yearsProjected];
         const computed = [];
@@ -140,8 +137,6 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
       } catch (error) {
         console.error('Error computing table data:', error);
         setTableData([]);
-      } finally {
-        setComputingTable(false);
       }
     }
     

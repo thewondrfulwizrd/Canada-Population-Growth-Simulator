@@ -29,8 +29,8 @@ export async function loadHistoricalBirths() {
       // Extract year from fiscal year format (YYYY/YYYY)
       // Fiscal year YYYY/YYYY+1 represents data for calendar year YYYY+1
       if (refDate.includes('/')) {
-        const [startYear, endYear] = refDate.split('/').map(y => parseInt(y));
-        
+        const [, endYear] = refDate.split('/').map(y => parseInt(y));
+
         // Only count "Total - gender" to avoid double-counting
         // Store using END year (e.g., 2024/2025 → 2025)
         if (genderField === 'Total - gender') {
@@ -147,7 +147,7 @@ export async function loadHistoricalMigration() {
       // Fiscal year YYYY/YYYY+1 represents data for calendar year YYYY+1
       let year;
       if (refDate.includes('/')) {
-        const [startYear, endYear] = refDate.split('/').map(y => parseInt(y));
+        const [, endYear] = refDate.split('/').map(y => parseInt(y));
         year = endYear; // Use END year (e.g., 2024/2025 → 2025)
       } else {
         year = parseInt(refDate);

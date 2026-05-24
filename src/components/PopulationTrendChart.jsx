@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getPopulationByYear, getTotalPopulation } from '../utils/populationHelpers';
 import { applyScenarios } from '../utils/scenarioCalculations';
 import './PopulationTrendChart.css';
 

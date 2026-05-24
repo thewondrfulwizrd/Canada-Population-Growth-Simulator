@@ -27,9 +27,9 @@ let projectionCache = {};
  * @param {Object} data - Full dataset with mortality and migration info
  * @returns {Object} { male: Array[21], female: Array[21], _components: {...} }
  */
-export async function projectOneYear(currentPopulation, scenarios, data) {
+export async function projectOneYear(currentPopulation, scenarios) {
   // Ensure data is loaded
-  await loadMortalityRates();
+  loadMortalityRates();
   await loadMigrationDistribution();
 
   const mortalityRates = getMortalityRates();
@@ -149,11 +149,6 @@ export async function projectOneYear(currentPopulation, scenarios, data) {
   projectedFemale[0] = staying0to4Female + femaleInfantSurvivors;
   projectedMale[0] = staying0to4Male + maleInfantSurvivors;
 
-  console.log('0-4 cohort calculation:');
-  console.log('  Previous 0-4 survivors (female):', survivors[0].female.toLocaleString());
-  console.log('  Staying in 0-4 (4/5):', staying0to4Female.toLocaleString());
-  console.log('  New births:', femaleInfantSurvivors.toLocaleString());
-  console.log('  Total 0-4:', projectedFemale[0].toLocaleString());
 
   // ============================================
   // STEP 6: Add migration
@@ -198,7 +193,6 @@ export async function projectToYear(data, scenarios, targetYear, baseYear = 2025
   // Generate cache key
   const cacheKey = `${targetYear}_${JSON.stringify(scenarios)}`;
   if (projectionCache[cacheKey]) {
-    console.log(`Using cached projection for ${targetYear}`);
     return projectionCache[cacheKey];
   }
 
@@ -210,7 +204,7 @@ export async function projectToYear(data, scenarios, targetYear, baseYear = 2025
 
   // Project year by year from base to target
   for (let year = baseYear + 1; year <= targetYear; year++) {
-    currentPop = await projectOneYear(currentPop, scenarios, data);
+    currentPop = await projectOneYear(currentPop, scenarios);
   }
 
   projectionCache[cacheKey] = currentPop;
@@ -231,7 +225,7 @@ export function clearProjectionCache() {
  * @returns {number} Global mortality rate per 1000 population
  */
 export async function calculateGlobalMortalityRate(population, scenarios) {
-  await loadMortalityRates();
+  loadMortalityRates();
   const mortalityRates = getMortalityRates();
 
   const mortalityMultiplier = 1 + scenarios.mortality / 100;
