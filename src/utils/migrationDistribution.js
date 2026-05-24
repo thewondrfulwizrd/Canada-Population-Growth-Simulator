@@ -19,7 +19,7 @@ export async function loadMigrationDistribution() {
   }
 
   try {
-    const response = await fetch('/data/source/Base_Migration.csv');
+    const response = await fetch(`${import.meta.env.BASE_URL}data/source/Base_Migration.csv`);
     const csv = await response.text();
     const lines = csv.trim().split('\n').slice(1); // Skip header
 

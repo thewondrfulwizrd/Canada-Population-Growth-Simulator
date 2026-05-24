@@ -1,7 +1,7 @@
 import React from 'react';
 import './ScenarioControls.css';
 
-const BASELINE_FERTILITY = 1.25; // Total Fertility Rate - updated to match Canada's 2023-2024
+const BASELINE_FERTILITY = 1.26; // Total Fertility Rate - Canada's 2023-2024 (Statistics Canada)
 const BASELINE_MIGRATION = 400000; // Net migration per year
 
 /**

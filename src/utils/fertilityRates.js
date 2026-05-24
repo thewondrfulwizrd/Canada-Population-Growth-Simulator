@@ -28,19 +28,18 @@ function getBaselineFertilityRates() {
   const rates = new Array(21).fill(0);
   
   // Set ASFRs for reproductive ages (15-49)
-  // Scaled to achieve TFR of 1.25
-  // Based on Statistics Canada age-distribution of fertility
-  rates[3] = 0.00301;   // Ages 15-19  (~2.4% of fertility)
-  rates[4] = 0.01703;   // Ages 20-24  (~13.6% of fertility)
-  rates[5] = 0.04742;   // Ages 25-29  (~37.9% of fertility, peak)
-  rates[6] = 0.06913;   // Ages 30-34  (~55.3% of fertility)
-  rates[7] = 0.04101;   // Ages 35-39  (~32.8% of fertility)
-  rates[8] = 0.00924;   // Ages 40-44  (~7.4% of fertility)
-  rates[9] = 0.00067;   // Ages 45-49  (~0.5% of fertility)
-  
+  // Based on Statistics Canada 2023-2024 age-specific fertility rates
+  // TFR = sum(rates) * 5 = 0.2523 * 5 ≈ 1.26 (matches Canada's 2023-2024 TFR)
+  rates[3] = 0.00405;   // Ages 15-19
+  rates[4] = 0.02285;   // Ages 20-24
+  rates[5] = 0.06375;   // Ages 25-29 (peak fertility)
+  rates[6] = 0.09310;   // Ages 30-34
+  rates[7] = 0.05520;   // Ages 35-39
+  rates[8] = 0.01245;   // Ages 40-44
+  rates[9] = 0.00090;   // Ages 45-49
+
   // All other age groups (0-14, 50+) remain 0
-  // This represents births per woman in that age group
-  // TFR = sum(rates) * 5 = 0.25 * 5 = 1.25
+  // TFR = sum(rates) * 5 = 0.2523 * 5 ≈ 1.26
   
   return rates;
 }

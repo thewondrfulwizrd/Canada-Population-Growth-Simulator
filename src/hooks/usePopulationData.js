@@ -7,7 +7,7 @@ export function usePopulationData() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch('/data/canada_age_sex_observed_projected_2000_2100_v2.json')
+    fetch(`${import.meta.env.BASE_URL}data/canada_age_sex_observed_projected_2000_2100_v2.json`)
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
