@@ -1,31 +1,48 @@
-import React from 'react';
+import { getTrajectoryBaselines } from '../utils/demographicTrajectories';
+import { InfoTooltip } from './InfoTooltip';
 import './ScenarioControls.css';
 
-const BASELINE_FERTILITY = 1.26; // Total Fertility Rate - Canada's 2023-2024 (Statistics Canada)
-const BASELINE_MIGRATION = 400000; // Net migration per year
+const HISTORICAL_MIGRATION = 400000; // Displayed for historical years (≤2025)
+
+const FERTILITY_TOOLTIP =
+  'Baseline TFR is projected to drift from 1.25 (2025) up to 1.45 by 2050, reflecting partial recovery — held constant after. Slider adjusts this trajectory.';
+
+const MORTALITY_TOOLTIP =
+  'Baseline assumes age-specific mortality rates decline ~0.7%/year through 2075 as life expectancy continues to rise, then constant. Slider adjusts the trajectory.';
+
+const MIGRATION_TOOLTIP =
+  'Baseline reflects continued NPR drawdown through 2027 (federal target: NPR ≤ 5% of population), settling to ~300K/year long-term. Slider adjusts the year baseline.';
 
 /**
  * ScenarioControls component
- * 
- * Key changes:
- * - BASELINE_FERTILITY updated to 1.25 (Canada's actual TFR)
- * - baselineMortality is now passed as a prop (calculated from actual year data)
- * - Mortality rate displayed is year-dependent and reflects actual deaths/population
+ *
+ * Each slider displays a year-dependent baseline pulled from the long-term
+ * trajectory functions. The user's slider adjustment stacks on top of that
+ * baseline (e.g. "+10% fertility" at year 2050 → TFR 1.45 × 1.10).
  */
-export function ScenarioControls({ scenarios, onScenarioChange, onReset, isHistorical, baselineMortality }) {
-  // Use passed-in baseline mortality (calculated from actual year data)
-  // Default to 7.5 if not provided (fallback to approximate Canada average)
-  const displayedBaselineMortality = baselineMortality || 7.5;
-  
-  // Log what we're receiving and displaying
-  console.log('[ScenarioControls] baselineMortality prop:', baselineMortality);
-  console.log('[ScenarioControls] displayedBaselineMortality:', displayedBaselineMortality);
+export function ScenarioControls({
+  scenarios,
+  onScenarioChange,
+  onReset,
+  isHistorical,
+  baselineMortality,
+  selectedYear,
+}) {
+  // Year-dependent trajectory baselines
+  const traj = getTrajectoryBaselines(selectedYear ?? 2025);
+  const baselineTFR = traj.tfr;
+  // Mortality: combine the cohort-weighted baseline (computed from the actual
+  // year's population by PopulationPyramid) with the trajectory multiplier.
+  const displayedBaselineMortality =
+    (baselineMortality || 7.5) * traj.mortalityMultiplier;
+  // Migration: historical years show the long-run 400K reference; projected
+  // years show the trajectory baseline.
+  const baselineMigration = isHistorical ? HISTORICAL_MIGRATION : traj.netMigration;
 
-  // Calculate adjusted baseline figures
-  const adjustedFertility = BASELINE_FERTILITY * (1 + scenarios.fertility / 100);
-  // MORTALITY: Positive % = higher mortality rate (worse), Negative % = lower mortality rate (better)
+  // Adjusted baseline figures (after slider)
+  const adjustedFertility = baselineTFR * (1 + scenarios.fertility / 100);
   const adjustedMortality = displayedBaselineMortality * (1 + scenarios.mortality / 100);
-  const adjustedMigration = Math.round(BASELINE_MIGRATION * (1 + scenarios.migration / 100));
+  const adjustedMigration = Math.round(baselineMigration * (1 + scenarios.migration / 100));
 
   return (
     <div className="scenario-controls">
@@ -43,12 +60,13 @@ export function ScenarioControls({ scenarios, onScenarioChange, onReset, isHisto
             <label>
               <span className="scenario-icon">👶</span>
               Fertility Rate (TFR)
+              <InfoTooltip text={FERTILITY_TOOLTIP} />
             </label>
             <span className={`scenario-value ${scenarios.fertility === 0 ? 'baseline' : scenarios.fertility > 0 ? 'increase' : 'decrease'}`}>
               {scenarios.fertility > 0 ? '+' : ''}{scenarios.fertility}%
             </span>
           </div>
-          
+
           <input
             type="range"
             min="-50"
@@ -58,21 +76,21 @@ export function ScenarioControls({ scenarios, onScenarioChange, onReset, isHisto
             onChange={(e) => onScenarioChange('fertility', parseInt(e.target.value))}
             className="slider"
           />
-          
+
           <div className="scenario-markers">
             <span>-50%</span>
             <span className="baseline-marker">0%</span>
             <span>+50%</span>
           </div>
-          
+
           <div className="baseline-display">
             <div className="baseline-item">
               <span className="baseline-label">Current TFR</span>
               <span className="baseline-value">{adjustedFertility.toFixed(2)}</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Baseline</span>
-              <span className="baseline-original">{BASELINE_FERTILITY.toFixed(2)}</span>
+              <span className="baseline-label">Baseline ({selectedYear ?? 2025})</span>
+              <span className="baseline-original">{baselineTFR.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -83,13 +101,14 @@ export function ScenarioControls({ scenarios, onScenarioChange, onReset, isHisto
             <label>
               <span className="scenario-icon">🏥</span>
               Mortality Rate
+              <InfoTooltip text={MORTALITY_TOOLTIP} />
             </label>
             {/* INVERTED: Positive % = RED (worse), Negative % = GREEN (better) */}
             <span className={`scenario-value ${scenarios.mortality === 0 ? 'baseline' : scenarios.mortality > 0 ? 'decrease' : 'increase'}`}>
               {scenarios.mortality > 0 ? '+' : ''}{scenarios.mortality}%
             </span>
           </div>
-          
+
           <input
             type="range"
             min="-50"
@@ -99,27 +118,22 @@ export function ScenarioControls({ scenarios, onScenarioChange, onReset, isHisto
             onChange={(e) => onScenarioChange('mortality', parseInt(e.target.value))}
             className="slider slider-inverted"
           />
-          
+
           <div className="scenario-markers">
             <span>-50% (better)</span>
             <span className="baseline-marker">0%</span>
             <span>+50% (worse)</span>
           </div>
-          
+
           <div className="baseline-display">
             <div className="baseline-item">
               <span className="baseline-label">Current Rate</span>
               <span className="baseline-value">{adjustedMortality.toFixed(1)}/1000</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Baseline</span>
+              <span className="baseline-label">Baseline ({selectedYear ?? 2025})</span>
               <span className="baseline-original">{displayedBaselineMortality.toFixed(1)}/1000</span>
             </div>
-          </div>
-          
-          {/* Note about year-dependent baseline */}
-          <div className="scenario-note">
-            <small>Baseline mortality for selected year (calculated from deaths/population)</small>
           </div>
         </div>
 
@@ -129,12 +143,13 @@ export function ScenarioControls({ scenarios, onScenarioChange, onReset, isHisto
             <label>
               <span className="scenario-icon">✈️</span>
               Net Migration
+              <InfoTooltip text={MIGRATION_TOOLTIP} />
             </label>
             <span className={`scenario-value ${scenarios.migration === 0 ? 'baseline' : scenarios.migration > 0 ? 'increase' : 'decrease'}`}>
               {scenarios.migration > 0 ? '+' : ''}{scenarios.migration}%
             </span>
           </div>
-          
+
           <input
             type="range"
             min="-75"
@@ -144,21 +159,21 @@ export function ScenarioControls({ scenarios, onScenarioChange, onReset, isHisto
             onChange={(e) => onScenarioChange('migration', parseInt(e.target.value))}
             className="slider"
           />
-          
+
           <div className="scenario-markers">
             <span>-75%</span>
             <span className="baseline-marker">0%</span>
             <span>+75%</span>
           </div>
-          
+
           <div className="baseline-display">
             <div className="baseline-item">
               <span className="baseline-label">Current</span>
               <span className="baseline-value">{adjustedMigration.toLocaleString()}</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Baseline</span>
-              <span className="baseline-original">{BASELINE_MIGRATION.toLocaleString()}</span>
+              <span className="baseline-label">Baseline ({selectedYear ?? 2025})</span>
+              <span className="baseline-original">{baselineMigration.toLocaleString()}</span>
             </div>
           </div>
         </div>

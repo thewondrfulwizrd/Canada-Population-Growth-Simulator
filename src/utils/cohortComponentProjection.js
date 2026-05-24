@@ -15,6 +15,11 @@ import { getPopulationByYear } from './populationHelpers';
 import { getMortalityRates, loadMortalityRates, INFANT_MORTALITY_UNDER1 } from './mortalityRates';
 import { getMigrationDistribution, loadMigrationDistribution } from './migrationDistribution';
 import { getAdjustedFertilityRates, calculateBirthsFromASFR } from './fertilityRates';
+import {
+  fertilityTrajectoryMultiplier,
+  mortalityTrajectoryMultiplier,
+  migrationTrajectoryBaseline,
+} from './demographicTrajectories';
 
 // Cache for computed projections to avoid recalculating
 let projectionCache = {};
@@ -38,36 +43,49 @@ function crudeToProb(ratePer1000) {
 }
 
 /**
- * Main projection function: applies cohort-component model for ONE YEAR
- * 
+ * Main projection function: applies cohort-component model for ONE YEAR.
+ *
  * @param {Object} currentPopulation - { male: Array[21], female: Array[21] }
  * @param {Object} scenarios - { fertility: number, mortality: number, migration: number }
- * @param {Object} data - Full dataset with mortality and migration info
+ * @param {number} year - The year being projected TO (e.g. 2026 when stepping from 2025).
+ *                        Used to apply long-term fertility/mortality/migration trajectories.
  * @returns {Object} { male: Array[21], female: Array[21], _components: {...} }
  */
-export async function projectOneYear(currentPopulation, scenarios) {
+export async function projectOneYear(currentPopulation, scenarios, year) {
   // Ensure data is loaded
   loadMortalityRates();
   await loadMigrationDistribution();
 
   const mortalityRates = getMortalityRates();
   const migrationDist = getMigrationDistribution();
-  const fertilityRates = getAdjustedFertilityRates(scenarios.fertility);
 
-  const baseMaleRates = mortalityRates.male;      // Already in per-1000 format
-  const baseFemaleRates = mortalityRates.female;  // Already in per-1000 format
-  const adjustedASFRs = fertilityRates.asfrs;    // Age-specific fertility rates
+  // Long-term trajectory multipliers (default to 1.0 if year is missing for
+  // backward-compatibility with callers that haven't been updated).
+  const fertTrajectory = year !== undefined ? fertilityTrajectoryMultiplier(year) : 1.0;
+  const mortTrajectory = year !== undefined ? mortalityTrajectoryMultiplier(year) : 1.0;
+  const migBaseline    = year !== undefined ? migrationTrajectoryBaseline(year)    : 400000;
 
-  // Constants for demographic model
-  const BASELINE_NET_MIGRATION = 400000; // Annual net migration
+  // Slider stacks on top of the trajectory: e.g. +10% fertility at year 2050
+  // gives an effective multiplier of 1.10 × (1.45/1.25) on the 2025 baseline.
+  // getAdjustedFertilityRates expects a percentage adjustment, so we convert
+  // the combined multiplier back to a percentage.
+  const combinedFertilityPct =
+    ((1 + scenarios.fertility / 100) * fertTrajectory - 1) * 100;
+  const fertilityRates = getAdjustedFertilityRates(combinedFertilityPct);
+
+  const baseMaleRates = mortalityRates.male;      // per-1000 (2024/2025 baseline)
+  const baseFemaleRates = mortalityRates.female;
+  const adjustedASFRs = fertilityRates.asfrs;
+
   const COHORT_WIDTH = 5; // Each age group spans 5 years
 
-  // Scenario adjustments
-  const mortalityMultiplier = 1 + scenarios.mortality / 100;
+  // Mortality multiplier combines the trajectory (rates decline over time) and
+  // the user's slider.
+  const mortalityMultiplier = (1 + scenarios.mortality / 100) * mortTrajectory;
   const migrationMultiplier = 1 + scenarios.migration / 100;
 
-  // Calculate adjusted net migration
-  const adjustedNetMigration = Math.round(BASELINE_NET_MIGRATION * migrationMultiplier);
+  // Net migration: trajectory baseline (year-dependent) scaled by slider.
+  const adjustedNetMigration = Math.round(migBaseline * migrationMultiplier);
 
   // ============================================
   // STEP 1: Calculate deaths for each cohort
@@ -251,9 +269,10 @@ export async function projectToYear(data, scenarios, targetYear, baseYear = 2025
     return null;
   }
 
-  // Project year by year from base to target
+  // Project year by year from base to target. Pass each year through so
+  // long-term fertility/mortality/migration trajectories apply correctly.
   for (let year = baseYear + 1; year <= targetYear; year++) {
-    currentPop = await projectOneYear(currentPop, scenarios);
+    currentPop = await projectOneYear(currentPop, scenarios, year);
   }
 
   projectionCache[cacheKey] = currentPop;

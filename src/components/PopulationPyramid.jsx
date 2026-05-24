@@ -126,6 +126,7 @@ export function PopulationPyramid() {
         onReset={handleReset}
         isHistorical={isHistorical}
         baselineMortality={baselineMortality}
+        selectedYear={selectedYear}
       />
 
       {/* Section Divider */}
