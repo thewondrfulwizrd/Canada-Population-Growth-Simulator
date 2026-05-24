@@ -98,10 +98,14 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
             // computed during the projection step for this exact year.
             const c = population._components;
             births = c.births;
-            // Total deaths = existing-population deaths + infant deaths from newborns
+            // Total deaths = existing-population deaths + infant deaths from
+            // newborns + within-year deaths among new migrants. With all three
+            // included, births - deaths + net_migration is an exact identity
+            // with the cohort model's nominal population change.
             const infantSurvivors = (c.maleInfantSurvivors || 0) + (c.femaleInfantSurvivors || 0);
             const infantDeaths = births - infantSurvivors;
-            deaths = c.deaths + infantDeaths;
+            const migrantDeaths = c.migrantDeaths || 0;
+            deaths = c.deaths + infantDeaths + migrantDeaths;
             netMigration = c.adjustedNetMigration;
           }
           
