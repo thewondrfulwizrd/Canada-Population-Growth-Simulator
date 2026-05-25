@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getPopulationByYear } from '../utils/populationHelpers';
 import { applyScenarios } from '../utils/scenarioCalculations';
 import { loadHistoricalBirths, loadHistoricalDeaths, loadHistoricalMortality, loadHistoricalMigration } from '../utils/historicalDataLoader';
 import './PopulationStatsTable.css';
-
-const BASELINE_MIGRATION = 400000;
-const BASELINE_FERTILITY = 1.5;
-const BASELINE_MORTALITY = 8.0; // Deaths per 1000 population (realistic rate for Canada)
 
 export function PopulationStatsTable({ data, scenarios, selectedYear }) {
   const [historicalBirths, setHistoricalBirths] = useState({});
@@ -15,7 +10,6 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
   const [historicalMigration, setHistoricalMigration] = useState({});
   const [dataLoaded, setDataLoaded] = useState(false);
   const [tableData, setTableData] = useState([]);
-  const [computingTable, setComputingTable] = useState(false);
 
   // Load historical data on mount
   useEffect(() => {
@@ -26,14 +20,6 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
         loadHistoricalMortality(),
         loadHistoricalMigration()
       ]);
-      
-      console.log('Loaded births:', Object.keys(births).length, 'years');
-      console.log('Loaded deaths:', Object.keys(deaths).length, 'years');
-      console.log('Loaded mortality:', Object.keys(mortality).length, 'years');
-      console.log('Loaded migration:', Object.keys(migration).length, 'years');
-      console.log('Sample births 2024:', births[2024], '2025:', births[2025]);
-      console.log('Sample deaths 2023:', deaths[2023], '2024:', deaths[2024], '2025:', deaths[2025]);
-      console.log('Sample migration 2024:', migration[2024], '2025:', migration[2025]);
       
       setHistoricalBirths(births);
       setHistoricalDeaths(deaths);
@@ -49,7 +35,6 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
     async function computeTableData() {
       if (!data || !dataLoaded) return;
       
-      setComputingTable(true);
       try {
         const years = [...data.yearsObserved, ...data.yearsProjected];
         const computed = [];
@@ -108,14 +93,20 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
             
             netMigration = Math.round(historicalMigration[year] || 0);
           } else {
-            // Use scenario-adjusted calculations for projected years
-            const adjustedFertility = BASELINE_FERTILITY * (1 + scenarios.fertility / 100);
-            const adjustedMortality = BASELINE_MORTALITY * (1 - scenarios.mortality / 100);
-            const adjustedMigration = Math.round(BASELINE_MIGRATION * (1 + scenarios.migration / 100));
-            
-            births = Math.round((total / 1000) * (adjustedFertility * 6.67));
-            deaths = Math.round((total / 1000) * adjustedMortality);
-            netMigration = adjustedMigration;
+            // Use exact values from the cohort-component model:
+            // _components contains age/sex-specific births, deaths, and migration
+            // computed during the projection step for this exact year.
+            const c = population._components;
+            births = c.births;
+            // Total deaths = existing-population deaths + infant deaths from
+            // newborns + within-year deaths among new migrants. With all three
+            // included, births - deaths + net_migration is an exact identity
+            // with the cohort model's nominal population change.
+            const infantSurvivors = (c.maleInfantSurvivors || 0) + (c.femaleInfantSurvivors || 0);
+            const infantDeaths = births - infantSurvivors;
+            const migrantDeaths = c.migrantDeaths || 0;
+            deaths = c.deaths + infantDeaths + migrantDeaths;
+            netMigration = c.adjustedNetMigration;
           }
           
           const naturalIncrease = births - deaths;
@@ -140,8 +131,6 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
       } catch (error) {
         console.error('Error computing table data:', error);
         setTableData([]);
-      } finally {
-        setComputingTable(false);
       }
     }
     

@@ -9,7 +9,7 @@
 
 export async function loadHistoricalBirths() {
   try {
-    const response = await fetch('/data/source/Base_Births.csv');
+    const response = await fetch(`${import.meta.env.BASE_URL}data/source/Base_Births.csv`);
     const csv = await response.text();
     const lines = csv.trim().split('\n').slice(1); // Skip header
     
@@ -29,8 +29,8 @@ export async function loadHistoricalBirths() {
       // Extract year from fiscal year format (YYYY/YYYY)
       // Fiscal year YYYY/YYYY+1 represents data for calendar year YYYY+1
       if (refDate.includes('/')) {
-        const [startYear, endYear] = refDate.split('/').map(y => parseInt(y));
-        
+        const [, endYear] = refDate.split('/').map(y => parseInt(y));
+
         // Only count "Total - gender" to avoid double-counting
         // Store using END year (e.g., 2024/2025 → 2025)
         if (genderField === 'Total - gender') {
@@ -54,7 +54,7 @@ export async function loadHistoricalBirths() {
 
 export async function loadHistoricalDeaths() {
   try {
-    const response = await fetch('/data/source/Base_Deaths.csv');
+    const response = await fetch(`${import.meta.env.BASE_URL}data/source/Base_Deaths.csv`);
     const csv = await response.text();
     const lines = csv.trim().split('\n').slice(1); // Skip header
     
@@ -88,7 +88,7 @@ export async function loadHistoricalDeaths() {
 
 export async function loadHistoricalMortality() {
   try {
-    const response = await fetch('/data/source/Base_Mortality.csv');
+    const response = await fetch(`${import.meta.env.BASE_URL}data/source/Base_Mortality.csv`);
     const csv = await response.text();
     const lines = csv.trim().split('\n').slice(1); // Skip header
     
@@ -121,7 +121,7 @@ export async function loadHistoricalMortality() {
 
 export async function loadHistoricalMigration() {
   try {
-    const response = await fetch('/data/source/Base_Migration.csv');
+    const response = await fetch(`${import.meta.env.BASE_URL}data/source/Base_Migration.csv`);
     const csv = await response.text();
     const lines = csv.trim().split('\n').slice(1); // Skip header
     
@@ -147,7 +147,7 @@ export async function loadHistoricalMigration() {
       // Fiscal year YYYY/YYYY+1 represents data for calendar year YYYY+1
       let year;
       if (refDate.includes('/')) {
-        const [startYear, endYear] = refDate.split('/').map(y => parseInt(y));
+        const [, endYear] = refDate.split('/').map(y => parseInt(y));
         year = endYear; // Use END year (e.g., 2024/2025 → 2025)
       } else {
         year = parseInt(refDate);

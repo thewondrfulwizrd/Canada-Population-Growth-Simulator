@@ -20,7 +20,6 @@ export function PopulationPyramid() {
     migration: 0
   });
   const [population, setPopulation] = useState({ male: [], female: [] });
-  const [projectionLoading, setProjectionLoading] = useState(false);
   const [showDebugTable, setShowDebugTable] = useState(false);
   const [baselineMortality, setBaselineMortality] = useState(7.5);
 
@@ -28,15 +27,12 @@ export function PopulationPyramid() {
   useEffect(() => {
     async function computePopulation() {
       if (!data) return;
-      setProjectionLoading(true);
       try {
         const result = await applyScenarios(data, scenarios, selectedYear);
         setPopulation(result || { male: [], female: [] });
       } catch (err) {
         console.error('Error computing population:', err);
         setPopulation({ male: [], female: [] });
-      } finally {
-        setProjectionLoading(false);
       }
     }
     computePopulation();
@@ -47,49 +43,25 @@ export function PopulationPyramid() {
   // rate for that year's age structure
   useEffect(() => {
     async function computeBaselineMortality() {
-      if (!data) {
-        console.log('[Baseline] No data available yet');
-        return;
-      }
-      
-      console.log(`[Baseline] Computing baseline mortality for year ${selectedYear}...`);
-      
+      if (!data) return;
+
       try {
-        // Get population for this year with NO scenario adjustments
-        console.log('[Baseline] Fetching population with 0% scenarios...');
         const baselinePop = await applyScenarios(
-          data, 
-          { fertility: 0, mortality: 0, migration: 0 },  // 0% scenarios
+          data,
+          { fertility: 0, mortality: 0, migration: 0 },
           selectedYear
         );
-        
-        if (!baselinePop) {
-          console.error('[Baseline] applyScenarios returned null/undefined');
-          return;
-        }
-        
-        if (!baselinePop.male || !baselinePop.male.length) {
-          console.error('[Baseline] Population has no male data:', baselinePop);
-          return;
-        }
-        
-        console.log('[Baseline] Population fetched:', {
-          totalMale: baselinePop.male.reduce((a,b) => a+b, 0),
-          totalFemale: baselinePop.female.reduce((a,b) => a+b, 0)
-        });
-        
-        // Calculate mortality rate for this baseline population
-        console.log('[Baseline] Calculating global mortality rate...');
+
+        if (!baselinePop || !baselinePop.male || !baselinePop.male.length) return;
+
         const baseline = await calculateGlobalMortalityRate(
           baselinePop,
-          { fertility: 0, mortality: 0, migration: 0 }  // 0% adjustment
+          { fertility: 0, mortality: 0, migration: 0 }
         );
-        
-        console.log(`[Baseline] ✓ Result: ${baseline.toFixed(2)} per 1000`);
+
         setBaselineMortality(baseline);
       } catch (err) {
-        console.error('[Baseline] Error calculating baseline mortality:', err);
-        console.error('[Baseline] Stack:', err.stack);
+        console.error('Error calculating baseline mortality:', err);
       }
     }
     
@@ -154,6 +126,7 @@ export function PopulationPyramid() {
         onReset={handleReset}
         isHistorical={isHistorical}
         baselineMortality={baselineMortality}
+        selectedYear={selectedYear}
       />
 
       {/* Section Divider */}
@@ -233,20 +206,22 @@ export function PopulationPyramid() {
       {/* Population Statistics Table */}
       <PopulationStatsTable data={data} scenarios={scenarios} selectedYear={selectedYear} />
 
-      {/* Debug Button */}
-      <button 
-        className="debug-button"
-        onClick={() => setShowDebugTable(!showDebugTable)}
-      >
-        {showDebugTable ? '🔼 Hide Debug Breakdown' : '🔽 Show Debug Breakdown'}
-      </button>
-
-      {/* Debug Table */}
-      <DebugTable 
-        data={data} 
-        scenarios={scenarios} 
-        visible={showDebugTable}
-      />
+      {/* Debug Table — development only */}
+      {import.meta.env.DEV && (
+        <>
+          <button
+            className="debug-button"
+            onClick={() => setShowDebugTable(!showDebugTable)}
+          >
+            {showDebugTable ? '🔼 Hide Debug Breakdown' : '🔽 Show Debug Breakdown'}
+          </button>
+          <DebugTable
+            data={data}
+            scenarios={scenarios}
+            visible={showDebugTable}
+          />
+        </>
+      )}
     </div>
   );
 }

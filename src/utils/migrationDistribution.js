@@ -19,7 +19,7 @@ export async function loadMigrationDistribution() {
   }
 
   try {
-    const response = await fetch('/data/source/Base_Migration.csv');
+    const response = await fetch(`${import.meta.env.BASE_URL}data/source/Base_Migration.csv`);
     const csv = await response.text();
     const lines = csv.trim().split('\n').slice(1); // Skip header
 
@@ -68,7 +68,11 @@ export async function loadMigrationDistribution() {
 
       // Use 2024/2025 fiscal year data (stored as 2025 in our loader)
       if (refDate !== '2024/2025') return;
-      if (gender !== 'Total - gender' && gender !== 'Males' && gender !== 'Females') return;
+      // StatsCan's current labels are "Men+" / "Women+". Older vintages
+      // exposed "Total - gender"; we don't use it (the gendered rows already
+      // give us the actual split, which is not exactly 50/50).
+      if (gender !== 'Men+' && gender !== 'Women+' &&
+          gender !== 'Males' && gender !== 'Females') return;
       if (ageGroup === 'All ages') return; // Skip "All ages" - we want specific age groups
 
       const ageIndex = ageGroupIndices[ageGroup];
@@ -77,13 +81,8 @@ export async function loadMigrationDistribution() {
       // Parse gender
       let isMale = false;
       let isFemale = false;
-      if (gender === 'Males') isMale = true;
-      else if (gender === 'Females') isFemale = true;
-      else if (gender === 'Total - gender') {
-        // For total, we'll split 50/50 between male/female
-        isMale = true;
-        isFemale = true;
-      }
+      if (gender === 'Men+' || gender === 'Males')     isMale = true;
+      else if (gender === 'Women+' || gender === 'Females') isFemale = true;
 
       // Add to appropriate category
       if (migrationType === 'Immigrants') {
