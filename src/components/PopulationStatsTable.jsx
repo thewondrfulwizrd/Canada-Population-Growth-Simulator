@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { applyScenarios } from '../utils/scenarioCalculations';
+import { calculateMedianAge } from '../utils/populationHelpers';
 import { loadHistoricalBirths, loadHistoricalDeaths, loadHistoricalMortality, loadHistoricalMigration } from '../utils/historicalDataLoader';
 import './PopulationStatsTable.css';
 
@@ -113,6 +114,8 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
 
           previousTotal = total;
 
+          const medianAge = calculateMedianAge(population);
+
           computed.push({
             year,
             population: total,
@@ -123,6 +126,7 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
             deaths,
             naturalIncrease,
             netMigration,
+            medianAge,
             isHistorical
           });
         }
@@ -160,6 +164,7 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
               <th>Deaths</th>
               <th>Natural Increase</th>
               <th>Net Migration</th>
+              <th>Median Age</th>
             </tr>
           </thead>
           <tbody>
@@ -191,11 +196,14 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
                   <td className="number-cell migration-cell">
                     {!row.showGrowth ? '-' : (row.netMigration > 0 ? '+' : '') + (row.netMigration / 1000).toFixed(0) + 'K'}
                   </td>
+                  <td className="number-cell">
+                    {row.medianAge !== null && row.medianAge !== undefined ? row.medianAge.toFixed(1) : '—'}
+                  </td>
                 </tr>
                 {/* Add demarcation line between 2025 and 2026 */}
                 {row.year === data.lastObservedYear && (
                   <tr className="demarcation-row">
-                    <td colSpan="8">
+                    <td colSpan="9">
                       <div className="demarcation-line">
                         <span className="demarcation-label">Historical Data Ends / Projections Begin</span>
                       </div>

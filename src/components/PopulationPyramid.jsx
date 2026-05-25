@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePopulationData } from '../hooks/usePopulationData';
-import { getYearType, formatPopulation } from '../utils/populationHelpers';
+import { getYearType, formatPopulation, calculateMedianAge } from '../utils/populationHelpers';
 import { applyScenarios } from '../utils/scenarioCalculations';
 import { calculateGlobalMortalityRate } from '../utils/cohortComponentProjection';
 import { ScenarioControls } from './ScenarioControls';
@@ -13,15 +13,26 @@ import './DebugTable.css';
 
 export function PopulationPyramid() {
   const { data, loading, error } = usePopulationData();
-  const [selectedYear, setSelectedYear] = useState(2025);
-  const [scenarios, setScenarios] = useState({
-    fertility: 0,
-    mortality: 0,
-    migration: 0
+  // Parse URL query params once on mount for shareable links
+  const [selectedYear, setSelectedYear] = useState(() => {
+    const y = parseInt(new URLSearchParams(window.location.search).get('year'));
+    return (!isNaN(y) && y >= 2000 && y <= 2100) ? y : 2026;
+  });
+  const [scenarios, setScenarios] = useState(() => {
+    const p  = new URLSearchParams(window.location.search);
+    const f  = parseInt(p.get('fertility'));
+    const m  = parseInt(p.get('mortality'));
+    const mg = parseInt(p.get('migration'));
+    return {
+      fertility: !isNaN(f)  ? Math.max(-50,  Math.min(50,  f))  : 0,
+      mortality: !isNaN(m)  ? Math.max(-50,  Math.min(50,  m))  : 0,
+      migration: !isNaN(mg) ? Math.max(-100, Math.min(100, mg)) : 0,
+    };
   });
   const [population, setPopulation] = useState({ male: [], female: [] });
   const [showDebugTable, setShowDebugTable] = useState(false);
   const [baselineMortality, setBaselineMortality] = useState(7.5);
+  const [shareCopied, setShareCopied] = useState(false);
 
   // Compute population when year or scenarios change
   useEffect(() => {
@@ -104,11 +115,31 @@ export function PopulationPyramid() {
     });
   };
 
+  const handleShare = () => {
+    const params = new URLSearchParams({
+      year: selectedYear,
+      fertility: scenarios.fertility,
+      mortality: scenarios.mortality,
+      migration: scenarios.migration,
+    });
+    const url = `${window.location.origin}${window.location.pathname}?${params}`;
+    window.history.replaceState(null, '', `?${params}`);
+    navigator.clipboard.writeText(url).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }).catch(() => {
+      // Fallback: prompt user to copy manually
+      window.prompt('Copy this link:', url);
+    });
+  };
+
+  const medianAge = population.male.length ? calculateMedianAge(population) : null;
+
   return (
     <div className="population-pyramid">
       {/* Canadian Flag Image */}
       <div className="canada-flag">
-        <img src="/canadaflag1.png" alt="Canada Flag" />
+        <img src={`${import.meta.env.BASE_URL}canadaflag1.png`} alt="Canada Flag" />
       </div>
       
       <h1>Canada Population Growth Model, 2025-2100</h1>
@@ -124,6 +155,8 @@ export function PopulationPyramid() {
         scenarios={scenarios}
         onScenarioChange={handleScenarioChange}
         onReset={handleReset}
+        onShare={handleShare}
+        shareCopied={shareCopied}
         isHistorical={isHistorical}
         baselineMortality={baselineMortality}
         selectedYear={selectedYear}
@@ -150,6 +183,10 @@ export function PopulationPyramid() {
           <div className="stat">
             <span className="label">Female</span>
             <span className="value female">{formatPopulation(totals.female)}</span>
+          </div>
+          <div className="stat">
+            <span className="label">Median Age</span>
+            <span className="value">{medianAge !== null ? medianAge.toFixed(1) : '—'}</span>
           </div>
         </div>
 

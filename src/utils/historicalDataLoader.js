@@ -140,8 +140,14 @@ export async function loadHistoricalMigration() {
       const valueStr = matches[12].replace(/"/g, '').trim(); // Migration VALUE is at index 12
       const value = parseInt(valueStr, 10) || 0;
       
-      // Only count "Total - gender" and "All ages" to get totals
-      if (genderField !== 'Total - gender' || ageGroup !== 'All ages') return;
+      // Accept "Total - gender" (old vintage) OR "Men+"/"Women+" (May 2025 vintage).
+      // Summing Men+ + Women+ rows naturally produces the correct total per
+      // year/migration-type since we accumulate with +=.
+      const isAnyGender =
+        genderField === 'Total - gender' ||
+        genderField === 'Men+'           ||
+        genderField === 'Women+';
+      if (!isAnyGender || ageGroup !== 'All ages') return;
       
       // Extract year from fiscal year format (YYYY/YYYY)
       // Fiscal year YYYY/YYYY+1 represents data for calendar year YYYY+1
