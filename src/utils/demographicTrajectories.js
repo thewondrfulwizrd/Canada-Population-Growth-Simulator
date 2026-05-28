@@ -34,17 +34,39 @@ export function fertilityTrajectoryMultiplier(year) {
 }
 
 /**
- * Mortality trajectory: rates decline ~0.7%/year through 2075, then constant.
- * Reflects continued life-expectancy gains decelerating as gains compress.
- * Roughly equivalent to +1 year of life expectancy per decade slowing over time.
+ * Mortality trajectory multiplier — age-stratified.
  *
- * Returns: multiplier to apply to the 2025-baseline mortality rates.
+ * Mortality improvements decelerate at extreme old age: clinical and actuarial
+ * evidence shows gains at 90-100+ are roughly half or less of gains at 65-75.
+ * Applying a uniform improvement rate across all ages overstates centenarian
+ * survivorship by 30-60% over a 50-year horizon.
+ *
+ * Improvement rates used:
+ *   Ages 0-79  (cohort indices 0-15):  0.70%/yr  — full observed improvement
+ *   Ages 80-89 (cohort indices 16-17): 0.35%/yr  — half rate (deceleration begins)
+ *   Ages 90+   (cohort indices 18-20): 0.175%/yr — quarter rate (biological limits)
+ *
+ * All rates are capped at 2075; improvements plateau thereafter.
+ *
+ * @param {number} year        - Projection year
+ * @param {number} ageIndex    - Cohort index 0-20 (0=0-4, 20=100+)
+ * @returns {number} Multiplier to apply to 2025-baseline age-specific mortality rate
  */
-export function mortalityTrajectoryMultiplier(year) {
+export function mortalityTrajectoryMultiplier(year, ageIndex = 0) {
   if (year <= BASE_YEAR) return 1.0;
   const cap = 2075;
-  const rate = 0.007;
   const yearsApplied = Math.min(year, cap) - BASE_YEAR;
+
+  // Taper improvement rate for the oldest age groups
+  let rate;
+  if (ageIndex <= 15) {
+    rate = 0.007;   // 0-79: full 0.70%/yr
+  } else if (ageIndex <= 17) {
+    rate = 0.0035;  // 80-89: half 0.35%/yr
+  } else {
+    rate = 0.00175; // 90+:  quarter 0.175%/yr
+  }
+
   return Math.pow(1 - rate, yearsApplied);
 }
 
