@@ -82,13 +82,17 @@ export function migrationTrajectoryBaseline(year) {
 }
 
 /**
- * Compute the year's display values (used by the UI to show year-dependent
- * "baseline" labels under each slider).
+ * Compute display values for the UI (NOT used by the projection engine).
+ *
+ * netMigration is intentionally fixed at 400K here — the near-term NPR
+ * drawdown patch is applied transparently by the projection engine via
+ * migrationTrajectoryBaseline(year) and should not appear in the scenario
+ * slider UI.
  */
 export function getTrajectoryBaselines(year) {
   return {
     tfr: 1.25 * fertilityTrajectoryMultiplier(year),
     mortalityMultiplier: mortalityTrajectoryMultiplier(year),
-    netMigration: migrationTrajectoryBaseline(year),
+    netMigration: 400_000, // UI reference only — model uses migrationTrajectoryBaseline()
   };
 }

@@ -41,12 +41,19 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
 
   if (!chartData.length || loading) return <div style={{ height: '340px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading chart...</div>;
 
-  // Fixed Y-axis: base at 31M, ticks every 5M up to the data ceiling
-  const Y_MIN  = 31_000_000;
+  // Chart dimensions — defined first so toY() can reference them
+  const width = 1000;
+  const height = 340;
+  const padding = { top: 30, right: 20, bottom: 40, left: 60 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+
+  // Fixed Y-axis: base at 30M, ticks every 5M up to the data ceiling
+  const Y_MIN  = 30_000_000;
   const Y_STEP =  5_000_000;
   const dataMax = Math.max(...chartData.map(d => d.total));
   // Round data ceiling up to the next 5M increment (add one step so there's
-  // always headroom above the tallest bar)
+  // always headroom above the tallest data point)
   const yMax   = Math.ceil((dataMax + Y_STEP) / Y_STEP) * Y_STEP;
   const yRange = yMax - Y_MIN;
 
@@ -56,13 +63,6 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
 
   // Convert a population value to SVG y-coordinate
   const toY = (value) => padding.top + chartHeight * (1 - (value - Y_MIN) / yRange);
-
-  // Calculate chart dimensions - INCREASED HEIGHT
-  const width = 1000;
-  const height = 340; // Increased from 300
-  const padding = { top: 30, right: 20, bottom: 40, left: 60 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
 
   // Create points for the line
   const points = chartData.map((d, i) => {
@@ -78,9 +78,10 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
   const chartBottom = toY(Y_MIN);
   const areaPath = `M ${padding.left},${chartBottom} L ${points.map(p => `${p.x},${p.y}`).join(' L ')} L ${padding.left + chartWidth},${chartBottom} Z`;
 
-  // Find the transition point between observed and projected (year 2025)
-  const transitionIndex = chartData.findIndex(d => d.year === 2025);
+  // Transition point: last observed year → first projected year boundary
+  const transitionIndex = chartData.findIndex(d => d.year === data.lastObservedYear);
   const transitionX = padding.left + (transitionIndex / (chartData.length - 1)) * chartWidth;
+  const firstProjectedYear = data.lastObservedYear + 1;
   
   // Calculate gradient percentage - relative to the actual chart area
   const gradientTransitionPercent = ((transitionX - padding.left) / chartWidth) * 100;
@@ -231,7 +232,7 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
             />
           ))}
 
-          {/* Observed/Projected divider at 2025 - NO LABEL to avoid overlap */}
+          {/* Observed/Projected divider line with first-projected-year label */}
           <line
             x1={transitionX}
             y1={padding.top}
@@ -239,6 +240,16 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
             y2={padding.top + chartHeight}
             className="divider-line"
           />
+          <text
+            x={transitionX + 6}
+            y={padding.top + 14}
+            className="divider-label"
+            fontSize="11"
+            fill="#9c27b0"
+            opacity="0.7"
+          >
+            {firstProjectedYear}
+          </text>
 
           {/* Area fill */}
           <path
