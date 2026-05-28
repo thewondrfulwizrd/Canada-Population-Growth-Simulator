@@ -31,8 +31,12 @@ export function PopulationPyramid() {
   });
   const [population, setPopulation] = useState({ male: [], female: [] });
   const [showDebugTable, setShowDebugTable] = useState(false);
-  const [baselineMortality, setBaselineMortality] = useState(7.5);
+  // Fixed mortality reference points (2025 = today's rate, 2075 = trajectory endpoint)
+  // Computed once on data load; not affected by year or scenario sliders.
+  const [baseMort2025, setBaseMort2025] = useState(7.5);
+  const [baseMort2075, setBaseMort2075] = useState(9.0);
   const [shareCopied, setShareCopied] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   // Compute population when year or scenarios change
   useEffect(() => {
@@ -49,35 +53,37 @@ export function PopulationPyramid() {
     computePopulation();
   }, [data, scenarios, selectedYear]);
 
-  // Calculate baseline mortality for the selected year (with 0% scenarios)
-  // This should update when the year changes, showing the natural mortality
-  // rate for that year's age structure
+  // Compute fixed mortality reference points once when data loads.
+  // 2025 = current baseline; 2075 = trajectory endpoint (includes aging effect).
+  // These do NOT change when the year slider or scenario sliders move.
   useEffect(() => {
-    async function computeBaselineMortality() {
+    async function computeMortalityRefs() {
       if (!data) return;
-
+      const zero = { fertility: 0, mortality: 0, migration: 0 };
       try {
-        const baselinePop = await applyScenarios(
-          data,
-          { fertility: 0, mortality: 0, migration: 0 },
-          selectedYear
-        );
-
-        if (!baselinePop || !baselinePop.male || !baselinePop.male.length) return;
-
-        const baseline = await calculateGlobalMortalityRate(
-          baselinePop,
-          { fertility: 0, mortality: 0, migration: 0 }
-        );
-
-        setBaselineMortality(baseline);
+        const [pop2025, pop2075] = await Promise.all([
+          applyScenarios(data, zero, 2025),
+          applyScenarios(data, zero, 2075),
+        ]);
+        if (pop2025?.male?.length) {
+          setBaseMort2025(await calculateGlobalMortalityRate(pop2025, zero));
+        }
+        if (pop2075?.male?.length) {
+          setBaseMort2075(await calculateGlobalMortalityRate(pop2075, zero));
+        }
       } catch (err) {
-        console.error('Error calculating baseline mortality:', err);
+        console.error('Error computing mortality references:', err);
       }
     }
-    
-    computeBaselineMortality();
-  }, [selectedYear, data]);  // Only when year or data changes, NOT scenarios
+    computeMortalityRefs();
+  }, [data]); // Only when data loads, never again
+
+  // Scroll-to-top button visibility
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 300);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   if (loading) return <div>Loading population data...</div>;
   if (error) return <div>Error loading data: {error.message}</div>;
@@ -158,8 +164,8 @@ export function PopulationPyramid() {
         onShare={handleShare}
         shareCopied={shareCopied}
         isHistorical={isHistorical}
-        baselineMortality={baselineMortality}
-        selectedYear={selectedYear}
+        baseMort2025={baseMort2025}
+        baseMort2075={baseMort2075}
       />
 
       {/* Section Divider */}
@@ -242,6 +248,17 @@ export function PopulationPyramid() {
 
       {/* Population Statistics Table */}
       <PopulationStatsTable data={data} scenarios={scenarios} selectedYear={selectedYear} />
+
+      {/* Scroll-to-top button — appears after scrolling past the chart */}
+      {showScrollTop && (
+        <button
+          className="scroll-top-btn"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Back to top"
+        >
+          ↑
+        </button>
+      )}
 
       {/* Debug Table — development only */}
       {import.meta.env.DEV && (

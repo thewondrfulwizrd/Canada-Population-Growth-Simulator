@@ -1,24 +1,32 @@
-import { getTrajectoryBaselines } from '../utils/demographicTrajectories';
 import { InfoTooltip } from './InfoTooltip';
 import './ScenarioControls.css';
 
-const HISTORICAL_MIGRATION = 400000; // Displayed for historical years (≤2025)
+// Fixed trajectory endpoints shown in the slider display panels
+const BASE_TFR      = 1.25;  // 2025 observed
+const TARGET_TFR    = 1.45;  // trajectory endpoint (2050)
+const MIGRATION_REF = 400_000; // long-run PR admission target (NPR patch is model-internal)
 
 const FERTILITY_TOOLTIP =
-  'Baseline TFR is projected to drift from 1.25 (2025) up to 1.45 by 2050, reflecting partial recovery — held constant after. Slider adjusts this trajectory.';
+  'TFR (2025) shows Canada\'s current total fertility rate — the fixed starting point. ' +
+  'Target by 2050 reflects projected partial recovery (1.25 → 1.45). ' +
+  'Slider applies a permanent % adjustment to the entire trajectory.';
 
 const MORTALITY_TOOLTIP =
-  'Baseline assumes age-specific mortality rates decline ~0.7%/year through 2075 as life expectancy continues to rise, then constant. Slider adjusts the trajectory.';
+  'Rate (2025) is today\'s crude death rate — fixed reference. ' +
+  'Projected (2075) shows the expected rate after ~0.7%/yr improvement in age-specific rates, combined with population aging. ' +
+  'The crude rate rises over time because more elderly people means more deaths per capita, even as individual age-group rates improve. ' +
+  'Slider adjusts the trajectory.';
 
 const MIGRATION_TOOLTIP =
-  'Baseline reflects continued NPR drawdown through 2027 (federal target: NPR ≤ 5% of population), settling to ~300K/year long-term. Slider adjusts the year baseline.';
+  'Annual PR target is Canada\'s long-run permanent-resident admission goal (~400K/yr). ' +
+  'Near-term NPR drawdown (2026–2029) is applied automatically by the model in the background. ' +
+  'Slider adjusts net migration relative to the 400K baseline.';
 
 /**
  * ScenarioControls component
  *
- * Each slider displays a year-dependent baseline pulled from the long-term
- * trajectory functions. The user's slider adjustment stacks on top of that
- * baseline (e.g. "+10% fertility" at year 2050 → TFR 1.45 × 1.10).
+ * Row 1 (fixed): 2025 anchor value — never changes with year slider or scenario slider.
+ * Row 2 (adjustable): trajectory endpoint × scenario-slider multiplier.
  */
 export function ScenarioControls({
   scenarios,
@@ -27,24 +35,17 @@ export function ScenarioControls({
   onShare,
   shareCopied,
   isHistorical,
-  baselineMortality,
-  selectedYear,
+  baseMort2025,
+  baseMort2075,
 }) {
-  // Year-dependent trajectory baselines
-  const traj = getTrajectoryBaselines(selectedYear ?? 2025);
-  const baselineTFR = traj.tfr;
-  // Mortality: combine the cohort-weighted baseline (computed from the actual
-  // year's population by PopulationPyramid) with the trajectory multiplier.
-  const displayedBaselineMortality =
-    (baselineMortality || 7.5) * traj.mortalityMultiplier;
-  // Migration: historical years show the long-run 400K reference; projected
-  // years show the trajectory baseline.
-  const baselineMigration = isHistorical ? HISTORICAL_MIGRATION : traj.netMigration;
+  // Fixed 2025 references
+  const mort2025 = baseMort2025 || 7.5;
+  const mort2075 = baseMort2075 || 9.0;
 
-  // Adjusted baseline figures (after slider)
-  const adjustedFertility = baselineTFR * (1 + scenarios.fertility / 100);
-  const adjustedMortality = displayedBaselineMortality * (1 + scenarios.mortality / 100);
-  const adjustedMigration = Math.round(baselineMigration * (1 + scenarios.migration / 100));
+  // Trajectory endpoints adjusted by slider (Row 2)
+  const targetTFR2050  = TARGET_TFR * (1 + scenarios.fertility / 100);
+  const projMort2075   = mort2075   * (1 + scenarios.mortality  / 100);
+  const adjMigration   = Math.round(MIGRATION_REF * (1 + scenarios.migration / 100));
 
   return (
     <div className="scenario-controls">
@@ -92,15 +93,14 @@ export function ScenarioControls({
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">Scenario TFR at {selectedYear ?? 2025}</span>
-              <span className="baseline-value">{adjustedFertility.toFixed(2)}</span>
+              <span className="baseline-label">TFR (2025)</span>
+              <span className="baseline-original">{BASE_TFR.toFixed(2)}</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Trajectory baseline</span>
-              <span className="baseline-original">{baselineTFR.toFixed(2)}</span>
+              <span className="baseline-label">Target by 2050</span>
+              <span className="baseline-value">{targetTFR2050.toFixed(2)}</span>
             </div>
           </div>
-          <div className="trajectory-note">Trajectory: 1.25 → 1.45 by 2050</div>
         </div>
 
         {/* Mortality Rate Slider - INVERTED COLORS AND BADGE */}
@@ -135,15 +135,14 @@ export function ScenarioControls({
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">Scenario Rate at {selectedYear ?? 2025}</span>
-              <span className="baseline-value">{adjustedMortality.toFixed(1)}/1000</span>
+              <span className="baseline-label">Rate (2025)</span>
+              <span className="baseline-original">{mort2025.toFixed(1)}/1000</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Trajectory baseline</span>
-              <span className="baseline-original">{displayedBaselineMortality.toFixed(1)}/1000</span>
+              <span className="baseline-label">Projected (2075)</span>
+              <span className="baseline-value">{projMort2075.toFixed(1)}/1000</span>
             </div>
           </div>
-          <div className="trajectory-note">Trajectory: −0.7%/yr through 2075</div>
         </div>
 
         {/* Net Migration Slider */}
@@ -177,15 +176,14 @@ export function ScenarioControls({
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">Scenario Migration at {selectedYear ?? 2025}</span>
-              <span className="baseline-value">{adjustedMigration.toLocaleString()}</span>
+              <span className="baseline-label">Annual PR target</span>
+              <span className="baseline-original">{MIGRATION_REF.toLocaleString()}</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Trajectory baseline</span>
-              <span className="baseline-original">{baselineMigration.toLocaleString()}</span>
+              <span className="baseline-label">With adjustment</span>
+              <span className="baseline-value">{adjMigration.toLocaleString()}</span>
             </div>
           </div>
-          <div className="trajectory-note">Trajectory: drawdown to ~−120K (2026) → 300K/yr (2030+)</div>
         </div>
       </div>
 
