@@ -51,18 +51,23 @@ function crudeToProb(ratePer1000) {
  *                        Used to apply long-term fertility/mortality/migration trajectories.
  * @returns {Object} { male: Array[21], female: Array[21], _components: {...} }
  */
-export async function projectOneYear(currentPopulation, scenarios, year) {
+export async function projectOneYear(currentPopulation, scenarios, year, migrationWeights = null) {
   // Ensure data is loaded
   loadMortalityRates();
   await loadMigrationDistribution();
 
   const mortalityRates = getMortalityRates();
-  const migrationDist = getMigrationDistribution();
+  // Use custom weights if provided, otherwise fall back to CSV-loaded distribution
+  const migrationDist = migrationWeights ?? getMigrationDistribution();
 
   // Long-term trajectory multipliers (default to 1.0 if year is missing for
   // backward-compatibility with callers that haven't been updated).
   const fertTrajectory = year !== undefined ? fertilityTrajectoryMultiplier(year) : 1.0;
-  const mortTrajectory = year !== undefined ? mortalityTrajectoryMultiplier(year) : 1.0;
+  // Mortality trajectory is now age-stratified (see mortalityTrajectoryMultiplier).
+  // Pre-compute per-cohort multipliers so the loop below stays readable.
+  const mortTrajByAge = year !== undefined
+    ? Array.from({ length: 21 }, (_, i) => mortalityTrajectoryMultiplier(year, i))
+    : new Array(21).fill(1.0);
   const migBaseline    = year !== undefined ? migrationTrajectoryBaseline(year)    : 400000;
 
   // Slider stacks on top of the trajectory: e.g. +10% fertility at year 2050
@@ -81,11 +86,16 @@ export async function projectOneYear(currentPopulation, scenarios, year) {
 
   // Mortality multiplier combines the trajectory (rates decline over time) and
   // the user's slider.
-  const mortalityMultiplier = (1 + scenarios.mortality / 100) * mortTrajectory;
-  const migrationMultiplier = 1 + scenarios.migration / 100;
+  // Scenario slider applies uniformly; trajectory component is age-stratified (computed above).
+  const scenarioMortFactor = 1 + scenarios.mortality / 100;
 
-  // Net migration: trajectory baseline (year-dependent) scaled by slider.
-  const adjustedNetMigration = Math.round(migBaseline * migrationMultiplier);
+  // Net migration: trajectory baseline (year-dependent) plus an additive offset from the
+  // long-run 400K steady-state, scaled by slider. This way +10% always means "+40K/yr"
+  // regardless of the NPR-patch year — 2026 goes from -120K → -80K, 2030+ from 400K → 440K.
+  // (Multiplicative scaling would perversely make a positive slider worsen the NPR drawdown.)
+  const MIGRATION_LONG_RUN = 400_000; // matches UI "Annual PR Target" baseline
+  const migSliderOffset = Math.round(MIGRATION_LONG_RUN * (scenarios.migration / 100));
+  const adjustedNetMigration = migBaseline + migSliderOffset;
 
   // ============================================
   // STEP 1: Calculate deaths for each cohort
@@ -103,9 +113,12 @@ export async function projectOneYear(currentPopulation, scenarios, year) {
     const baseMaleMortalityPer1000 = baseMaleRates[i] || 8.0;
     const baseFemaleMortalityPer1000 = baseFemaleRates[i] || 8.0;
 
-    // Apply scenario slider to each rate independently
-    const adjustedMaleMortalityPer1000 = baseMaleMortalityPer1000 * mortalityMultiplier;
-    const adjustedFemaleMortalityPer1000 = baseFemaleMortalityPer1000 * mortalityMultiplier;
+    // Combine scenario slider with age-stratified trajectory multiplier.
+    // mortTrajByAge[i] tapers the improvement rate for ages 80+ so extreme-old-age
+    // survivorship doesn't grow unrealistically fast (see mortalityTrajectoryMultiplier).
+    const ageMortMultiplier = scenarioMortFactor * mortTrajByAge[i];
+    const adjustedMaleMortalityPer1000 = baseMaleMortalityPer1000 * ageMortMultiplier;
+    const adjustedFemaleMortalityPer1000 = baseFemaleMortalityPer1000 * ageMortMultiplier;
 
     // Convert crude rate (M) to probability of death (q) via standard
     // actuarial conversion. Negligible difference at low rates; corrects
@@ -173,8 +186,10 @@ export async function projectOneYear(currentPopulation, scenarios, year) {
   // Apply UNDER-1 mortality to newborns specifically. The 0-4 cohort rate
   // in MORTALITY_RATES is a 5-year weighted average; newborns face the
   // much higher first-year rate.
-  const infantMortalityMale   = crudeToProb(INFANT_MORTALITY_UNDER1.male   * mortalityMultiplier);
-  const infantMortalityFemale = crudeToProb(INFANT_MORTALITY_UNDER1.female * mortalityMultiplier);
+  // Newborns are age 0 → use index-0 trajectory multiplier (full improvement rate)
+  const infantMortMultiplier  = scenarioMortFactor * mortTrajByAge[0];
+  const infantMortalityMale   = crudeToProb(INFANT_MORTALITY_UNDER1.male   * infantMortMultiplier);
+  const infantMortalityFemale = crudeToProb(INFANT_MORTALITY_UNDER1.female * infantMortMultiplier);
 
   // Canada SRB ≈ 1.05 → male share 0.5122, female share 0.4878
   const maleInfantSurvivors   = Math.round(births * MALE_SHARE_AT_BIRTH   * (1 - infantMortalityMale));
@@ -204,10 +219,10 @@ export async function projectOneYear(currentPopulation, scenarios, year) {
   // Multiply each age cohort's migration count by (1 - 0.5 * q_age).
   // Effect is small (<0.3% of total migration); larger for elderly migrants.
   const halfYearSurvivalMale = baseMaleRates.map(
-    r => 1 - 0.5 * crudeToProb(r * mortalityMultiplier)
+    (r, i) => 1 - 0.5 * crudeToProb(r * scenarioMortFactor * mortTrajByAge[i])
   );
   const halfYearSurvivalFemale = baseFemaleRates.map(
-    r => 1 - 0.5 * crudeToProb(r * mortalityMultiplier)
+    (r, i) => 1 - 0.5 * crudeToProb(r * scenarioMortFactor * mortTrajByAge[i])
   );
 
   const maleMigration = migrationDist.male.map(
@@ -242,7 +257,7 @@ export async function projectOneYear(currentPopulation, scenarios, year) {
       migrantDeaths,                 // within-year deaths of new migrants (Step 6)
       adjustedTFR: fertilityRates.tfr,
       adjustedNetMigration,
-      adjustedMortalityMultiplier: mortalityMultiplier,
+      adjustedMortalityMultiplier: scenarioMortFactor,
       globalMortalityRate: totalPopulation > 0 ? (totalDeaths / totalPopulation) * 1000 : 0
     }
   };
@@ -256,9 +271,10 @@ export async function projectOneYear(currentPopulation, scenarios, year) {
  * @param {number} baseYear - Starting year (typically 2025)
  * @returns {Object} Population for target year
  */
-export async function projectToYear(data, scenarios, targetYear, baseYear = 2025) {
-  // Generate cache key
-  const cacheKey = `${targetYear}_${JSON.stringify(scenarios)}`;
+export async function projectToYear(data, scenarios, targetYear, baseYear = 2025, migrationWeights = null) {
+  // Generate cache key — include weights fingerprint so custom weights get their own cache entries
+  const weightsKey = migrationWeights ? JSON.stringify(migrationWeights) : 'default';
+  const cacheKey = `${targetYear}_${JSON.stringify(scenarios)}_${weightsKey}`;
   if (projectionCache[cacheKey]) {
     return projectionCache[cacheKey];
   }
@@ -272,7 +288,7 @@ export async function projectToYear(data, scenarios, targetYear, baseYear = 2025
   // Project year by year from base to target. Pass each year through so
   // long-term fertility/mortality/migration trajectories apply correctly.
   for (let year = baseYear + 1; year <= targetYear; year++) {
-    currentPop = await projectOneYear(currentPop, scenarios, year);
+    currentPop = await projectOneYear(currentPop, scenarios, year, migrationWeights);
   }
 
   projectionCache[cacheKey] = currentPop;
@@ -296,7 +312,7 @@ export async function calculateGlobalMortalityRate(population, scenarios) {
   loadMortalityRates();
   const mortalityRates = getMortalityRates();
 
-  const mortalityMultiplier = 1 + scenarios.mortality / 100;
+  const scenarioMortFactor = 1 + scenarios.mortality / 100;
 
   let totalDeaths = 0;
   let totalPopulation = 0;
@@ -310,9 +326,10 @@ export async function calculateGlobalMortalityRate(population, scenarios) {
     const baseMaleMortalityPer1000 = (mortalityRates.male[i] || 8.0);
     const baseFemaleMortalityPer1000 = (mortalityRates.female[i] || 8.0);
 
-    // Apply scenario adjustment
-    const adjustedMaleMortalityPer1000 = baseMaleMortalityPer1000 * mortalityMultiplier;
-    const adjustedFemaleMortalityPer1000 = baseFemaleMortalityPer1000 * mortalityMultiplier;
+    // Apply scenario adjustment (no trajectory component here — this function
+    // computes the rate for a specific already-projected population snapshot)
+    const adjustedMaleMortalityPer1000 = baseMaleMortalityPer1000 * scenarioMortFactor;
+    const adjustedFemaleMortalityPer1000 = baseFemaleMortalityPer1000 * scenarioMortFactor;
 
     // Match the M→q conversion used in projectOneYear for consistency
     const maleMortalityProp = crudeToProb(adjustedMaleMortalityPer1000);
