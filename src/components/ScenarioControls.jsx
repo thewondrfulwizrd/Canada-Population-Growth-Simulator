@@ -24,6 +24,8 @@ export function ScenarioControls({
   scenarios,
   onScenarioChange,
   onReset,
+  onShare,
+  shareCopied,
   isHistorical,
   baselineMortality,
   selectedYear,
@@ -48,9 +50,14 @@ export function ScenarioControls({
     <div className="scenario-controls">
       <div className="scenario-header">
         <h3>📊 Scenario Builder</h3>
-        <button className="reset-button" onClick={onReset}>
-          Reset to Baseline
-        </button>
+        <div className="scenario-header-actions">
+          <button className="reset-button" onClick={onReset}>
+            Reset to Baseline
+          </button>
+          <button className={`share-button${shareCopied ? ' copied' : ''}`} onClick={onShare}>
+            {shareCopied ? '✅ Copied!' : '🔗 Share'}
+          </button>
+        </div>
       </div>
 
       <div className="scenario-sliders">
@@ -85,14 +92,15 @@ export function ScenarioControls({
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">Current TFR</span>
+              <span className="baseline-label">Scenario TFR at {selectedYear ?? 2025}</span>
               <span className="baseline-value">{adjustedFertility.toFixed(2)}</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Baseline ({selectedYear ?? 2025})</span>
+              <span className="baseline-label">Trajectory baseline</span>
               <span className="baseline-original">{baselineTFR.toFixed(2)}</span>
             </div>
           </div>
+          <div className="trajectory-note">Trajectory: 1.25 → 1.45 by 2050</div>
         </div>
 
         {/* Mortality Rate Slider - INVERTED COLORS AND BADGE */}
@@ -127,14 +135,15 @@ export function ScenarioControls({
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">Current Rate</span>
+              <span className="baseline-label">Scenario Rate at {selectedYear ?? 2025}</span>
               <span className="baseline-value">{adjustedMortality.toFixed(1)}/1000</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Baseline ({selectedYear ?? 2025})</span>
+              <span className="baseline-label">Trajectory baseline</span>
               <span className="baseline-original">{displayedBaselineMortality.toFixed(1)}/1000</span>
             </div>
           </div>
+          <div className="trajectory-note">Trajectory: −0.7%/yr through 2075</div>
         </div>
 
         {/* Net Migration Slider */}
@@ -152,8 +161,8 @@ export function ScenarioControls({
 
           <input
             type="range"
-            min="-75"
-            max="75"
+            min="-100"
+            max="100"
             value={scenarios.migration}
             step="5"
             onChange={(e) => onScenarioChange('migration', parseInt(e.target.value))}
@@ -161,21 +170,22 @@ export function ScenarioControls({
           />
 
           <div className="scenario-markers">
-            <span>-75%</span>
+            <span>-100%</span>
             <span className="baseline-marker">0%</span>
-            <span>+75%</span>
+            <span>+100%</span>
           </div>
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">Current</span>
+              <span className="baseline-label">Scenario Migration at {selectedYear ?? 2025}</span>
               <span className="baseline-value">{adjustedMigration.toLocaleString()}</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Baseline ({selectedYear ?? 2025})</span>
+              <span className="baseline-label">Trajectory baseline</span>
               <span className="baseline-original">{baselineMigration.toLocaleString()}</span>
             </div>
           </div>
+          <div className="trajectory-note">Trajectory: drawdown to ~−120K (2026) → 300K/yr (2030+)</div>
         </div>
       </div>
 

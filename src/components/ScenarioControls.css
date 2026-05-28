@@ -48,6 +48,38 @@
   opacity: 0.6;
 }
 
+.scenario-header-actions {
+  display: flex;
+  gap: var(--space-10);
+  align-items: center;
+}
+
+.share-button {
+  padding: var(--space-10) var(--space-16);
+  background: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: var(--radius-base);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--duration-fast) var(--ease-standard);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.share-button:hover {
+  background: #1b5e20;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.share-button.copied {
+  background: #1565c0;
+  cursor: default;
+  transform: none;
+}
+
 .scenario-sliders {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -243,6 +275,14 @@ input[type="range"].slider::-moz-range-thumb:active {
   color: #333333;
   font-size: 0.9rem;
   font-weight: var(--font-weight-medium);
+}
+
+.trajectory-note {
+  margin-top: var(--space-6);
+  font-size: 0.72rem;
+  color: #555;
+  font-style: italic;
+  letter-spacing: 0.2px;
 }
 
 .scenario-active-banner {

@@ -41,10 +41,21 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
 
   if (!chartData.length || loading) return <div style={{ height: '340px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading chart...</div>;
 
-  // Find min and max for scaling
-  const minPop = Math.min(...chartData.map(d => d.total));
-  const maxPop = Math.max(...chartData.map(d => d.total));
-  const popRange = maxPop - minPop;
+  // Fixed Y-axis: base at 31M, ticks every 5M up to the data ceiling
+  const Y_MIN  = 31_000_000;
+  const Y_STEP =  5_000_000;
+  const dataMax = Math.max(...chartData.map(d => d.total));
+  // Round data ceiling up to the next 5M increment (add one step so there's
+  // always headroom above the tallest bar)
+  const yMax   = Math.ceil((dataMax + Y_STEP) / Y_STEP) * Y_STEP;
+  const yRange = yMax - Y_MIN;
+
+  // Tick marks: 35M, 40M, 45M … up to yMax
+  const yTicks = [];
+  for (let v = Y_MIN + Y_STEP; v <= yMax; v += Y_STEP) yTicks.push(v);
+
+  // Convert a population value to SVG y-coordinate
+  const toY = (value) => padding.top + chartHeight * (1 - (value - Y_MIN) / yRange);
 
   // Calculate chart dimensions - INCREASED HEIGHT
   const width = 1000;
@@ -56,15 +67,16 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
   // Create points for the line
   const points = chartData.map((d, i) => {
     const x = padding.left + (i / (chartData.length - 1)) * chartWidth;
-    const y = padding.top + chartHeight - ((d.total - minPop) / popRange) * chartHeight;
+    const y = toY(d.total);
     return { x, y, year: d.year, total: d.total };
   });
 
   // Create SVG path for the line
   const linePath = `M ${points.map(p => `${p.x},${p.y}`).join(' L ')}`;
-  
-  // Create area fill path
-  const areaPath = `M ${padding.left},${padding.top + chartHeight} L ${points.map(p => `${p.x},${p.y}`).join(' L ')} L ${padding.left + chartWidth},${padding.top + chartHeight} Z`;
+
+  // Create area fill path (bottom edge = toY(Y_MIN) = bottom of chart)
+  const chartBottom = toY(Y_MIN);
+  const areaPath = `M ${padding.left},${chartBottom} L ${points.map(p => `${p.x},${p.y}`).join(' L ')} L ${padding.left + chartWidth},${chartBottom} Z`;
 
   // Find the transition point between observed and projected (year 2025)
   const transitionIndex = chartData.findIndex(d => d.year === 2025);
@@ -91,13 +103,7 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
     }
   }
 
-  // Y-axis labels
-  const yAxisLabels = [];
-  for (let i = 0; i <= 4; i++) {
-    const value = minPop + (popRange * i / 4);
-    const y = padding.top + chartHeight - (chartHeight * i / 4);
-    yAxisLabels.push({ value, y });
-  }
+  // (yTicks already computed above; yAxisLabels alias kept for grid lines below)
 
   // X-axis labels (every 25 years)
   const xAxisLabels = [];
@@ -214,13 +220,13 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
           </defs>
 
           {/* Grid lines */}
-          {yAxisLabels.map((label, i) => (
+          {yTicks.map(v => (
             <line
-              key={i}
+              key={v}
               x1={padding.left}
-              y1={label.y}
+              y1={toY(v)}
               x2={padding.left + chartWidth}
-              y2={label.y}
+              y2={toY(v)}
               className="grid-line"
             />
           ))}
@@ -301,15 +307,15 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
           />
 
           {/* Y-axis labels */}
-          {yAxisLabels.map((label, i) => (
+          {yTicks.map(v => (
             <text
-              key={i}
+              key={v}
               x={padding.left - 10}
-              y={label.y + 4}
+              y={toY(v) + 4}
               className="axis-label"
               textAnchor="end"
             >
-              {(label.value / 1000000).toFixed(0)}M
+              {(v / 1_000_000).toFixed(0)}M
             </text>
           ))}
 
