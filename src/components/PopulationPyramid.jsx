@@ -31,6 +31,8 @@ export function PopulationPyramid() {
   });
   const [population, setPopulation] = useState({ male: [], female: [] });
   const [showDebugTable, setShowDebugTable] = useState(false);
+  const [migrationWeights, setMigrationWeights] = useState(null); // null = use CSV defaults
+  const [showAdvanced, setShowAdvanced] = useState(false);
   // Fixed mortality reference points (2025 = today's rate, 2075 = trajectory endpoint)
   // Computed once on data load; not affected by year or scenario sliders.
   const [baseMort2025, setBaseMort2025] = useState(7.5);
@@ -43,7 +45,7 @@ export function PopulationPyramid() {
     async function computePopulation() {
       if (!data) return;
       try {
-        const result = await applyScenarios(data, scenarios, selectedYear);
+        const result = await applyScenarios(data, scenarios, selectedYear, migrationWeights);
         setPopulation(result || { male: [], female: [] });
       } catch (err) {
         console.error('Error computing population:', err);
@@ -51,7 +53,7 @@ export function PopulationPyramid() {
       }
     }
     computePopulation();
-  }, [data, scenarios, selectedYear]);
+  }, [data, scenarios, selectedYear, migrationWeights]);
 
   // Compute fixed mortality reference points once when data loads.
   // 2025 = current baseline; 2075 = trajectory endpoint (includes aging effect).
@@ -151,7 +153,7 @@ export function PopulationPyramid() {
       <h1>Canada Population Growth Model, 2025-2100</h1>
       
       {/* Population Trend Chart - MOVED TO TOP */}
-      <PopulationTrendChart data={data} scenarios={scenarios} selectedYear={selectedYear} onYearChange={setSelectedYear} />
+      <PopulationTrendChart data={data} scenarios={scenarios} selectedYear={selectedYear} onYearChange={setSelectedYear} migrationWeights={migrationWeights} />
 
       {/* First Year Selector */}
       <YearSlider data={data} selectedYear={selectedYear} onYearChange={setSelectedYear} yearType={yearType} />
@@ -166,6 +168,10 @@ export function PopulationPyramid() {
         isHistorical={isHistorical}
         baseMort2025={baseMort2025}
         baseMort2075={baseMort2075}
+        showAdvanced={showAdvanced}
+        onToggleAdvanced={() => setShowAdvanced(v => !v)}
+        migrationWeights={migrationWeights}
+        onMigrationWeightsChange={setMigrationWeights}
       />
 
       {/* Section Divider */}
@@ -247,7 +253,7 @@ export function PopulationPyramid() {
       <YearSlider data={data} selectedYear={selectedYear} onYearChange={setSelectedYear} yearType={yearType} />
 
       {/* Population Statistics Table */}
-      <PopulationStatsTable data={data} scenarios={scenarios} selectedYear={selectedYear} />
+      <PopulationStatsTable data={data} scenarios={scenarios} selectedYear={selectedYear} migrationWeights={migrationWeights} />
 
       {/* Scroll-to-top button — appears after scrolling past the chart */}
       {showScrollTop && (

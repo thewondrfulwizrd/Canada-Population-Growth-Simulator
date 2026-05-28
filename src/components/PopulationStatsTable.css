@@ -181,6 +181,37 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* NPR drawdown explanatory note (appears after 2026 row) */
+.npr-note-row {
+  background: transparent !important;
+  border: none !important;
+}
+
+.npr-note-row td {
+  padding: 0 !important;
+  border: none !important;
+}
+
+.npr-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 6px 0 10px;
+  padding: 10px 14px;
+  background: rgba(25, 118, 210, 0.07);
+  border: 1px solid rgba(25, 118, 210, 0.25);
+  border-left: 4px solid #1976d2;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.8rem;
+  color: #333;
+  line-height: 1.5;
+}
+
+.npr-note-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
 @media (max-width: 768px) {
   .population-stats-table {
     font-size: 0.8rem;

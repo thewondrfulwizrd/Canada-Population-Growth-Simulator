@@ -1,14 +1,16 @@
 import { InfoTooltip } from './InfoTooltip';
+import { MigrationWeightsPanel } from './MigrationWeightsPanel';
 import './ScenarioControls.css';
 
 // Fixed trajectory endpoints shown in the slider display panels
 const BASE_TFR      = 1.25;  // 2025 observed
-const TARGET_TFR    = 1.45;  // trajectory endpoint (2050)
+const TARGET_TFR    = 1.30;  // trajectory endpoint (2050) — Statistics Canada medium-growth scenario
 const MIGRATION_REF = 400_000; // long-run PR admission target (NPR patch is model-internal)
 
 const FERTILITY_TOOLTIP =
   'TFR (2025) shows Canada\'s current total fertility rate — the fixed starting point. ' +
-  'Target by 2050 reflects projected partial recovery (1.25 → 1.45). ' +
+  'Projected TFR (2050) reflects a modest partial recovery to 1.30, consistent with ' +
+  'Statistics Canada\'s medium-growth projection scenario. ' +
   'Slider applies a permanent % adjustment to the entire trajectory.';
 
 const MORTALITY_TOOLTIP =
@@ -20,7 +22,9 @@ const MORTALITY_TOOLTIP =
 const MIGRATION_TOOLTIP =
   'Annual PR target is Canada\'s long-run permanent-resident admission goal (~400K/yr). ' +
   'Near-term NPR drawdown (2026–2029) is applied automatically by the model in the background. ' +
-  'Slider adjusts net migration relative to the 400K baseline.';
+  'Slider adjusts net migration relative to the 400K baseline. ' +
+  'Note: the simulation assumes effectively net-zero emigration — all 400K PR admissions ' +
+  'are treated as net additions to the population.';
 
 /**
  * ScenarioControls component
@@ -37,6 +41,10 @@ export function ScenarioControls({
   isHistorical,
   baseMort2025,
   baseMort2075,
+  showAdvanced,
+  onToggleAdvanced,
+  migrationWeights,
+  onMigrationWeightsChange,
 }) {
   // Fixed 2025 references
   const mort2025 = baseMort2025 || 7.5;
@@ -93,11 +101,11 @@ export function ScenarioControls({
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">TFR (2025)</span>
+              <span className="baseline-label">Current TFR (2025)</span>
               <span className="baseline-original">{BASE_TFR.toFixed(2)}</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Target by 2050</span>
+              <span className="baseline-label">Projected TFR (2050)</span>
               <span className="baseline-value">{targetTFR2050.toFixed(2)}</span>
             </div>
           </div>
@@ -135,11 +143,11 @@ export function ScenarioControls({
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">Rate (2025)</span>
+              <span className="baseline-label">Current MR (2025)</span>
               <span className="baseline-original">{mort2025.toFixed(1)}/1000</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Projected (2075)</span>
+              <span className="baseline-label">Projected MR (2075)</span>
               <span className="baseline-value">{projMort2075.toFixed(1)}/1000</span>
             </div>
           </div>
@@ -176,16 +184,28 @@ export function ScenarioControls({
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">Annual PR target</span>
+              <span className="baseline-label">Annual PR Target</span>
               <span className="baseline-original">{MIGRATION_REF.toLocaleString()}</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">With adjustment</span>
+              <span className="baseline-label">Projected PR Target (2030)</span>
               <span className="baseline-value">{adjMigration.toLocaleString()}</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Advanced Options toggle */}
+      <button className="advanced-toggle-btn" onClick={onToggleAdvanced}>
+        {showAdvanced ? '▲ Hide Advanced Options' : '▼ Advanced Options'}
+      </button>
+
+      {showAdvanced && (
+        <MigrationWeightsPanel
+          weights={migrationWeights}
+          onWeightsChange={onMigrationWeightsChange}
+        />
+      )}
 
       {!isHistorical && (scenarios.fertility !== 0 || scenarios.mortality !== 0 || scenarios.migration !== 0) && (
         <div className="scenario-active-banner">
