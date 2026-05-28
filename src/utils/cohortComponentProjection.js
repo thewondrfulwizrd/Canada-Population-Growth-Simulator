@@ -51,13 +51,14 @@ function crudeToProb(ratePer1000) {
  *                        Used to apply long-term fertility/mortality/migration trajectories.
  * @returns {Object} { male: Array[21], female: Array[21], _components: {...} }
  */
-export async function projectOneYear(currentPopulation, scenarios, year) {
+export async function projectOneYear(currentPopulation, scenarios, year, migrationWeights = null) {
   // Ensure data is loaded
   loadMortalityRates();
   await loadMigrationDistribution();
 
   const mortalityRates = getMortalityRates();
-  const migrationDist = getMigrationDistribution();
+  // Use custom weights if provided, otherwise fall back to CSV-loaded distribution
+  const migrationDist = migrationWeights ?? getMigrationDistribution();
 
   // Long-term trajectory multipliers (default to 1.0 if year is missing for
   // backward-compatibility with callers that haven't been updated).
@@ -82,10 +83,14 @@ export async function projectOneYear(currentPopulation, scenarios, year) {
   // Mortality multiplier combines the trajectory (rates decline over time) and
   // the user's slider.
   const mortalityMultiplier = (1 + scenarios.mortality / 100) * mortTrajectory;
-  const migrationMultiplier = 1 + scenarios.migration / 100;
 
-  // Net migration: trajectory baseline (year-dependent) scaled by slider.
-  const adjustedNetMigration = Math.round(migBaseline * migrationMultiplier);
+  // Net migration: trajectory baseline (year-dependent) plus an additive offset from the
+  // long-run 300K steady-state, scaled by slider. This way +10% always means "+30K/yr"
+  // regardless of the NPR-patch year — 2026 goes from -120K → -90K, 2030+ from 300K → 330K.
+  // (Multiplicative scaling would perversely make a positive slider worsen the NPR drawdown.)
+  const MIGRATION_LONG_RUN = 300_000;
+  const migSliderOffset = Math.round(MIGRATION_LONG_RUN * (scenarios.migration / 100));
+  const adjustedNetMigration = migBaseline + migSliderOffset;
 
   // ============================================
   // STEP 1: Calculate deaths for each cohort
@@ -256,9 +261,10 @@ export async function projectOneYear(currentPopulation, scenarios, year) {
  * @param {number} baseYear - Starting year (typically 2025)
  * @returns {Object} Population for target year
  */
-export async function projectToYear(data, scenarios, targetYear, baseYear = 2025) {
-  // Generate cache key
-  const cacheKey = `${targetYear}_${JSON.stringify(scenarios)}`;
+export async function projectToYear(data, scenarios, targetYear, baseYear = 2025, migrationWeights = null) {
+  // Generate cache key — include weights fingerprint so custom weights get their own cache entries
+  const weightsKey = migrationWeights ? JSON.stringify(migrationWeights) : 'default';
+  const cacheKey = `${targetYear}_${JSON.stringify(scenarios)}_${weightsKey}`;
   if (projectionCache[cacheKey]) {
     return projectionCache[cacheKey];
   }
@@ -272,7 +278,7 @@ export async function projectToYear(data, scenarios, targetYear, baseYear = 2025
   // Project year by year from base to target. Pass each year through so
   // long-term fertility/mortality/migration trajectories apply correctly.
   for (let year = baseYear + 1; year <= targetYear; year++) {
-    currentPop = await projectOneYear(currentPop, scenarios, year);
+    currentPop = await projectOneYear(currentPop, scenarios, year, migrationWeights);
   }
 
   projectionCache[cacheKey] = currentPop;

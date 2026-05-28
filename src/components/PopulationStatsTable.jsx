@@ -4,7 +4,7 @@ import { calculateMedianAge } from '../utils/populationHelpers';
 import { loadHistoricalBirths, loadHistoricalDeaths, loadHistoricalMortality, loadHistoricalMigration } from '../utils/historicalDataLoader';
 import './PopulationStatsTable.css';
 
-export function PopulationStatsTable({ data, scenarios, selectedYear }) {
+export function PopulationStatsTable({ data, scenarios, selectedYear, migrationWeights = null }) {
   const [historicalBirths, setHistoricalBirths] = useState({});
   const [historicalDeaths, setHistoricalDeaths] = useState({});
   const [historicalMortality, setHistoricalMortality] = useState({});
@@ -42,7 +42,7 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
         let previousTotal = null;
         
         for (const year of years) {
-          const population = await applyScenarios(data, scenarios, year);
+          const population = await applyScenarios(data, scenarios, year, migrationWeights);
           if (!population) continue;
           
           const maleTotal = population.male.reduce((sum, val) => sum + val, 0);
@@ -139,7 +139,7 @@ export function PopulationStatsTable({ data, scenarios, selectedYear }) {
     }
     
     computeTableData();
-  }, [data, scenarios, dataLoaded, historicalBirths, historicalDeaths, historicalMortality, historicalMigration]);
+  }, [data, scenarios, dataLoaded, historicalBirths, historicalDeaths, historicalMortality, historicalMigration, migrationWeights]);
 
   if (!tableData.length) return <div>Loading statistics table...</div>;
 

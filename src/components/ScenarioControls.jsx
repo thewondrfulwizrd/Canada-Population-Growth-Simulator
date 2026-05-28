@@ -1,4 +1,5 @@
 import { InfoTooltip } from './InfoTooltip';
+import { MigrationWeightsPanel } from './MigrationWeightsPanel';
 import './ScenarioControls.css';
 
 // Fixed trajectory endpoints shown in the slider display panels
@@ -37,6 +38,10 @@ export function ScenarioControls({
   isHistorical,
   baseMort2025,
   baseMort2075,
+  showAdvanced,
+  onToggleAdvanced,
+  migrationWeights,
+  onMigrationWeightsChange,
 }) {
   // Fixed 2025 references
   const mort2025 = baseMort2025 || 7.5;
@@ -93,11 +98,11 @@ export function ScenarioControls({
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">TFR (2025)</span>
+              <span className="baseline-label">Current TFR (2025)</span>
               <span className="baseline-original">{BASE_TFR.toFixed(2)}</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Target by 2050</span>
+              <span className="baseline-label">Projected TFR (2050)</span>
               <span className="baseline-value">{targetTFR2050.toFixed(2)}</span>
             </div>
           </div>
@@ -135,11 +140,11 @@ export function ScenarioControls({
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">Rate (2025)</span>
+              <span className="baseline-label">Current MR (2025)</span>
               <span className="baseline-original">{mort2025.toFixed(1)}/1000</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">Projected (2075)</span>
+              <span className="baseline-label">Projected MR (2075)</span>
               <span className="baseline-value">{projMort2075.toFixed(1)}/1000</span>
             </div>
           </div>
@@ -176,16 +181,28 @@ export function ScenarioControls({
 
           <div className="baseline-display">
             <div className="baseline-item">
-              <span className="baseline-label">Annual PR target</span>
+              <span className="baseline-label">Annual PR Target</span>
               <span className="baseline-original">{MIGRATION_REF.toLocaleString()}</span>
             </div>
             <div className="baseline-item">
-              <span className="baseline-label">With adjustment</span>
+              <span className="baseline-label">Projected PR Target (2030)</span>
               <span className="baseline-value">{adjMigration.toLocaleString()}</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Advanced Options toggle */}
+      <button className="advanced-toggle-btn" onClick={onToggleAdvanced}>
+        {showAdvanced ? '▲ Hide Advanced Options' : '▼ Advanced Options'}
+      </button>
+
+      {showAdvanced && (
+        <MigrationWeightsPanel
+          weights={migrationWeights}
+          onWeightsChange={onMigrationWeightsChange}
+        />
+      )}
 
       {!isHistorical && (scenarios.fertility !== 0 || scenarios.mortality !== 0 || scenarios.migration !== 0) && (
         <div className="scenario-active-banner">

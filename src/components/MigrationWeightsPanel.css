@@ -1,0 +1,173 @@
+.migration-weights-panel {
+  margin-top: var(--space-24);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-20);
+}
+
+.mwp-header {
+  margin-bottom: var(--space-16);
+}
+
+.mwp-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-8);
+}
+
+.mwp-title-row h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: var(--font-weight-semibold);
+  color: #000000;
+}
+
+.mwp-reset-btn {
+  padding: var(--space-6) var(--space-12);
+  background: var(--color-bg-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: #333333;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.mwp-reset-btn:hover {
+  background: var(--color-secondary);
+  border-color: #aaa;
+}
+
+.mwp-description {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #555;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.mwp-loading {
+  padding: var(--space-16);
+  color: #666;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+/* Scrollable container so table doesn't overflow on small screens */
+.mwp-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+}
+
+.mwp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 300px;
+}
+
+.mwp-table thead th {
+  background: #e8f4f8;
+  border-bottom: 2px solid #b3d9e6;
+  padding: var(--space-8) var(--space-10);
+  text-align: center;
+  font-weight: var(--font-weight-semibold);
+  color: #000000;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.mwp-table thead th.age-col,
+.mwp-table td.age-col {
+  text-align: left;
+}
+
+.mwp-table tbody tr.even {
+  background: #fafafa;
+}
+
+.mwp-table tbody tr.odd {
+  background: #ffffff;
+}
+
+.mwp-table tbody tr:hover {
+  background: #f0f7fb;
+}
+
+.mwp-table td {
+  padding: 3px var(--space-8);
+  border-bottom: 1px solid #f0f0f0;
+  color: #000000;
+}
+
+.mwp-table td.age-col {
+  font-weight: var(--font-weight-medium);
+  color: #333333;
+  white-space: nowrap;
+  min-width: 70px;
+}
+
+.mwp-table td.male-col {
+  text-align: center;
+}
+
+.mwp-table td.female-col {
+  text-align: center;
+}
+
+.mwp-input {
+  width: 72px;
+  padding: 2px 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  text-align: right;
+  background: #fff;
+  color: #000;
+  transition: border-color var(--duration-fast) var(--ease-standard);
+  -moz-appearance: textfield; /* Firefox: hide number spinner */
+}
+
+.mwp-input::-webkit-outer-spin-button,
+.mwp-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.mwp-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
+}
+
+/* Footer total row */
+.mwp-total-row {
+  background: #e8f4f8 !important;
+  border-top: 2px solid #b3d9e6;
+}
+
+.mwp-total-row td {
+  font-weight: var(--font-weight-bold);
+  color: #000000;
+  padding: var(--space-8) var(--space-10);
+  text-align: center;
+}
+
+.mwp-total-row td:first-child {
+  text-align: left;
+}
+
+/* Custom distribution active banner */
+.mwp-custom-banner {
+  margin-top: var(--space-10);
+  padding: var(--space-8) var(--space-12);
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: #000000;
+  font-weight: var(--font-weight-medium);
+}

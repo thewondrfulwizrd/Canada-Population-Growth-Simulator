@@ -15,16 +15,16 @@ import { projectToYear, calculateGlobalMortalityRate, clearProjectionCache } fro
  * @param {number} year - Year to apply scenarios to
  * @returns {Object} { male: Array, female: Array } - Adjusted population
  */
-export async function applyScenarios(data, scenarios, year) {
+export async function applyScenarios(data, scenarios, year, migrationWeights = null) {
   const yearType = getYearType(data, year);
-  
+
   // Don't modify historical data
   if (yearType === 'observed') {
     return getPopulationByYear(data, year);
   }
 
   // For projected years, use cohort-component model
-  const projected = await projectToYear(data, scenarios, year, 2025);
+  const projected = await projectToYear(data, scenarios, year, 2025, migrationWeights);
   
   if (!projected) {
     console.warn(`Failed to project population for year ${year}`);

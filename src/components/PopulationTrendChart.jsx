@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { applyScenarios } from '../utils/scenarioCalculations';
 import './PopulationTrendChart.css';
 
-export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChange }) {
+export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChange, migrationWeights = null }) {
   const svgRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [chartData, setChartData] = useState([]);
@@ -18,7 +18,7 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
         const computed = [];
         
         for (const year of years) {
-          const population = await applyScenarios(data, scenarios, year);
+          const population = await applyScenarios(data, scenarios, year, migrationWeights);
           if (population) {
             const maleTotal = population.male.reduce((sum, val) => sum + val, 0);
             const femaleTotal = population.female.reduce((sum, val) => sum + val, 0);
@@ -37,7 +37,7 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
     }
     
     computeChartData();
-  }, [data, scenarios]);
+  }, [data, scenarios, migrationWeights]);
 
   if (!chartData.length || loading) return <div style={{ height: '340px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading chart...</div>;
 
@@ -78,10 +78,10 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
   const chartBottom = toY(Y_MIN);
   const areaPath = `M ${padding.left},${chartBottom} L ${points.map(p => `${p.x},${p.y}`).join(' L ')} L ${padding.left + chartWidth},${chartBottom} Z`;
 
-  // Transition point: last observed year → first projected year boundary
-  const transitionIndex = chartData.findIndex(d => d.year === data.lastObservedYear);
-  const transitionX = padding.left + (transitionIndex / (chartData.length - 1)) * chartWidth;
+  // Transition point: place divider at the first *projected* year (2026), not the last observed (2025)
   const firstProjectedYear = data.lastObservedYear + 1;
+  const transitionIndex = chartData.findIndex(d => d.year === firstProjectedYear);
+  const transitionX = padding.left + (transitionIndex / (chartData.length - 1)) * chartWidth;
   
   // Calculate gradient percentage - relative to the actual chart area
   const gradientTransitionPercent = ((transitionX - padding.left) / chartWidth) * 100;
@@ -241,12 +241,11 @@ export function PopulationTrendChart({ data, scenarios, selectedYear, onYearChan
             className="divider-line"
           />
           <text
-            x={transitionX + 6}
-            y={padding.top + 14}
+            x={transitionX}
+            y={padding.top - 10}
             className="divider-label"
-            fontSize="11"
-            fill="#9c27b0"
-            opacity="0.7"
+            textAnchor="middle"
+            style={{ pointerEvents: 'none' }}
           >
             {firstProjectedYear}
           </text>
