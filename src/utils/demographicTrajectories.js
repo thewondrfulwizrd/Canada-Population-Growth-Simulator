@@ -60,9 +60,14 @@ export function mortalityTrajectoryMultiplier(year) {
  *   - IRCC Levels Plan: PR admissions 395K (2025) → 380K (2026) → 365K (2027).
  *   - Annual emigration runs ~65K (StatsCan Net emigration).
  *
- * Net migration = PR + Net NPR change − Net emigration. Trajectory below
- * blends continued NPR drawdown (steepest in 2026) with steady-state PR.
- * Beyond 2030 stabilises near 300K — PR target ~365K minus emigration ~65K.
+ * Net migration trajectory:
+ *   2026: large negative — aggressive NPR stock drawdown overlaps with PR admissions & emigration
+ *   2027–2029: recovery as NPR drawdown eases and PR admissions dominate
+ *   2030+: steady-state 400K/yr (matches the UI "Annual PR Target" baseline)
+ *
+ * The 400K long-run figure is the headline PR admissions target. Emigration (~65K/yr)
+ * is implicitly netted out via the migration distribution data, which uses observed
+ * net-migration flows (immigrants + NPR change − emigrants) from StatsCan.
  *
  * For 2025 and earlier, the model uses observed historical data, so this
  * function only matters for the projected years.
@@ -71,14 +76,14 @@ const MIGRATION_TRAJECTORY = {
   2026: -120000,  // Aggressive NPR drawdown (~-450K) + PR (~380K) - emig (~65K)
   2027:  175000,  // NPR drawdown easing (~-140K) + PR (~365K) - emig (~65K)
   2028:  280000,  // NPR roughly stable + PR (~365K) - emig (~65K)
-  2029:  300000,
-  2030:  300000,
+  2029:  350000,  // Transition toward steady-state; NPR stock stabilised
+  2030:  400000,  // Steady-state: matches UI "Annual PR Target" baseline
 };
 
 export function migrationTrajectoryBaseline(year) {
   if (year <= BASE_YEAR) return 400000; // not used; observed data is used for historical
-  if (year >= 2030) return 300000;
-  return MIGRATION_TRAJECTORY[year] ?? 300000;
+  if (year >= 2030) return 400000;
+  return MIGRATION_TRAJECTORY[year] ?? 400000;
 }
 
 /**

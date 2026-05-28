@@ -85,10 +85,10 @@ export async function projectOneYear(currentPopulation, scenarios, year, migrati
   const mortalityMultiplier = (1 + scenarios.mortality / 100) * mortTrajectory;
 
   // Net migration: trajectory baseline (year-dependent) plus an additive offset from the
-  // long-run 300K steady-state, scaled by slider. This way +10% always means "+30K/yr"
-  // regardless of the NPR-patch year — 2026 goes from -120K → -90K, 2030+ from 300K → 330K.
+  // long-run 400K steady-state, scaled by slider. This way +10% always means "+40K/yr"
+  // regardless of the NPR-patch year — 2026 goes from -120K → -80K, 2030+ from 400K → 440K.
   // (Multiplicative scaling would perversely make a positive slider worsen the NPR drawdown.)
-  const MIGRATION_LONG_RUN = 300_000;
+  const MIGRATION_LONG_RUN = 400_000; // matches UI "Annual PR Target" baseline
   const migSliderOffset = Math.round(MIGRATION_LONG_RUN * (scenarios.migration / 100));
   const adjustedNetMigration = migBaseline + migSliderOffset;
 

@@ -200,12 +200,30 @@ export function PopulationStatsTable({ data, scenarios, selectedYear, migrationW
                     {row.medianAge !== null && row.medianAge !== undefined ? row.medianAge.toFixed(1) : '—'}
                   </td>
                 </tr>
-                {/* Add demarcation line between 2025 and 2026 */}
+                {/* Demarcation between historical and projected */}
                 {row.year === data.lastObservedYear && (
                   <tr className="demarcation-row">
                     <td colSpan="9">
                       <div className="demarcation-line">
                         <span className="demarcation-label">Historical Data Ends / Projections Begin</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {/* NPR drawdown note — appears immediately after the 2026 row */}
+                {row.year === 2026 && (
+                  <tr className="npr-note-row">
+                    <td colSpan="9">
+                      <div className="npr-note">
+                        <span className="npr-note-icon">ℹ️</span>
+                        <span>
+                          <strong>Net Migration (2026–2029):</strong> These figures reflect Canada's
+                          ongoing drawdown of its non-permanent resident (NPR) stock. Federal policy
+                          targets NPR ≤ 5% of population (~2.1M), requiring a reduction of ~500K from
+                          the 2024 peak — spread across 2026–2028. As a result, net migration is
+                          temporarily depressed (or negative in 2026) even as PR admissions continue.
+                          By 2030 the NPR stock stabilises and net migration returns to the ~400K baseline.
+                        </span>
                       </div>
                     </td>
                   </tr>
