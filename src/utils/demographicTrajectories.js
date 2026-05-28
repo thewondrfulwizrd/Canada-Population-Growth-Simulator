@@ -17,10 +17,9 @@
 const BASE_YEAR = 2025;
 
 /**
- * Fertility trajectory: TFR drifts from 1.25 (2025) toward 1.45 by 2050,
- * then constant. This mirrors the partial-recovery assumption used in
- * StatsCan's M-series medium-growth scenarios; without it, projections
- * extrapolate today's record-low TFR for 75 years.
+ * Fertility trajectory: TFR drifts from 1.25 (2025) toward 1.30 by 2050,
+ * then constant. This aligns with Statistics Canada's medium-growth scenario;
+ * without it, projections extrapolate today's record-low TFR for 75 years.
  *
  * Returns: multiplier to apply to the 2025-baseline ASFRs.
  */
@@ -28,7 +27,7 @@ export function fertilityTrajectoryMultiplier(year) {
   if (year <= BASE_YEAR) return 1.0;
   const targetYear = 2050;
   const startTFR = 1.25;
-  const endTFR = 1.45;
+  const endTFR = 1.30;
   if (year >= targetYear) return endTFR / startTFR;
   const t = (year - BASE_YEAR) / (targetYear - BASE_YEAR);
   return (startTFR + t * (endTFR - startTFR)) / startTFR;

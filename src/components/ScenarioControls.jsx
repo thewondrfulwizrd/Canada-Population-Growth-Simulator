@@ -4,12 +4,13 @@ import './ScenarioControls.css';
 
 // Fixed trajectory endpoints shown in the slider display panels
 const BASE_TFR      = 1.25;  // 2025 observed
-const TARGET_TFR    = 1.45;  // trajectory endpoint (2050)
+const TARGET_TFR    = 1.30;  // trajectory endpoint (2050) — Statistics Canada medium-growth scenario
 const MIGRATION_REF = 400_000; // long-run PR admission target (NPR patch is model-internal)
 
 const FERTILITY_TOOLTIP =
   'TFR (2025) shows Canada\'s current total fertility rate — the fixed starting point. ' +
-  'Target by 2050 reflects projected partial recovery (1.25 → 1.45). ' +
+  'Projected TFR (2050) reflects a modest partial recovery to 1.30, consistent with ' +
+  'Statistics Canada\'s medium-growth projection scenario. ' +
   'Slider applies a permanent % adjustment to the entire trajectory.';
 
 const MORTALITY_TOOLTIP =
@@ -21,7 +22,9 @@ const MORTALITY_TOOLTIP =
 const MIGRATION_TOOLTIP =
   'Annual PR target is Canada\'s long-run permanent-resident admission goal (~400K/yr). ' +
   'Near-term NPR drawdown (2026–2029) is applied automatically by the model in the background. ' +
-  'Slider adjusts net migration relative to the 400K baseline.';
+  'Slider adjusts net migration relative to the 400K baseline. ' +
+  'Note: the simulation assumes effectively net-zero emigration — all 400K PR admissions ' +
+  'are treated as net additions to the population.';
 
 /**
  * ScenarioControls component
